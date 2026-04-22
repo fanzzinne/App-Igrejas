@@ -368,6 +368,75 @@ function showCommunitySection(section, btn) {
 }
 
 let bibleBooksData = [];
+// Mapeamento para API Bolls.life (ID do livro e total de capítulos)
+const BIBLE_BOOKS_FALLBACK = [
+    { id: 1, name: "Gênesis", abbrev: "gn", chapters: 50 },
+    { id: 2, name: "Êxodo", abbrev: "ex", chapters: 40 },
+    { id: 3, name: "Levítico", abbrev: "lv", chapters: 27 },
+    { id: 4, name: "Números", abbrev: "nm", chapters: 36 },
+    { id: 5, name: "Deuteronômio", abbrev: "dt", chapters: 34 },
+    { id: 6, name: "Josué", abbrev: "js", chapters: 24 },
+    { id: 7, name: "Juízes", abbrev: "jz", chapters: 21 },
+    { id: 8, name: "Rute", abbrev: "rt", chapters: 4 },
+    { id: 9, name: "1 Samuel", abbrev: "1sm", chapters: 31 },
+    { id: 10, name: "2 Samuel", abbrev: "2sm", chapters: 24 },
+    { id: 11, name: "1 Reis", abbrev: "1rs", chapters: 22 },
+    { id: 12, name: "2 Reis", abbrev: "2rs", chapters: 25 },
+    { id: 13, name: "1 Crônicas", abbrev: "1cr", chapters: 29 },
+    { id: 14, name: "2 Crônicas", abbrev: "2cr", chapters: 36 },
+    { id: 15, name: "Esdras", abbrev: "ezr", chapters: 10 },
+    { id: 16, name: "Neemias", abbrev: "ne", chapters: 13 },
+    { id: 17, name: "Ester", abbrev: "et", chapters: 10 },
+    { id: 18, name: "Jó", abbrev: "job", chapters: 42 },
+    { id: 19, name: "Salmos", abbrev: "ps", chapters: 150 },
+    { id: 20, name: "Provérbios", abbrev: "pr", chapters: 31 },
+    { id: 21, name: "Eclesiastes", abbrev: "ec", chapters: 12 },
+    { id: 22, name: "Cânticos", abbrev: "ct", chapters: 8 },
+    { id: 23, name: "Isaías", abbrev: "is", chapters: 66 },
+    { id: 24, name: "Jeremias", abbrev: "jr", chapters: 52 },
+    { id: 25, name: "Lamentações", abbrev: "lm", chapters: 5 },
+    { id: 26, name: "Ezequiel", abbrev: { pt: "ez" }, chapters: 48 },
+    { id: 27, name: "Daniel", abbrev: "dn", chapters: 12 },
+    { id: 28, name: "Oseias", abbrev: "os", chapters: 14 },
+    { id: 29, name: "Joel", abbrev: "jl", chapters: 3 },
+    { id: 30, name: "Amós", abbrev: "am", chapters: 9 },
+    { id: 31, name: "Obadias", abbrev: "ob", chapters: 1 },
+    { id: 32, name: "Jonas", abbrev: "jn", chapters: 4 },
+    { id: 33, name: "Miqueias", abbrev: "mi", chapters: 7 },
+    { id: 34, name: "Naum", abbrev: "na", chapters: 3 },
+    { id: 35, name: "Habacuque", abbrev: "hb", chapters: 3 },
+    { id: 36, name: "Sofonias", abbrev: "sf", chapters: 3 },
+    { id: 37, name: "Ageu", abbrev: "ag", chapters: 2 },
+    { id: 38, name: "Zacarias", abbrev: "zc", chapters: 14 },
+    { id: 39, name: "Malaquias", abbrev: "ml", chapters: 4 },
+    { id: 40, name: "Mateus", abbrev: "mt", chapters: 28 },
+    { id: 41, name: "Marcos", abbrev: "mk", chapters: 16 },
+    { id: 42, name: "Lucas", abbrev: "lk", chapters: 24 },
+    { id: 43, name: "João", abbrev: "jn", chapters: 21 },
+    { id: 44, name: "Atos", abbrev: "act", chapters: 28 },
+    { id: 45, name: "Romanos", abbrev: "rm", chapters: 16 },
+    { id: 46, name: "1 Coríntios", abbrev: "1co", chapters: 16 },
+    { id: 47, name: "2 Coríntios", abbrev: "2co", chapters: 13 },
+    { id: 48, name: "Gálatas", abbrev: "gl", chapters: 6 },
+    { id: 49, name: "Efésios", abbrev: "ep", chapters: 6 },
+    { id: 50, name: "Filipenses", abbrev: "ph", chapters: 4 },
+    { id: 51, name: "Colossenses", abbrev: "cl", chapters: 4 },
+    { id: 52, name: "1 Tessalonicenses", abbrev: "1ts", chapters: 5 },
+    { id: 53, name: "2 Tessalonicenses", abbrev: "2ts", chapters: 3 },
+    { id: 54, name: "1 Timóteo", abbrev: "1tm", chapters: 6 },
+    { id: 55, name: "2 Timóteo", abbrev: "2tm", chapters: 4 },
+    { id: 56, name: "Tito", abbrev: "tt", chapters: 3 },
+    { id: 57, name: "Filemom", abbrev: "phm", chapters: 1 },
+    { id: 58, name: "Hebreus", abbrev: "hb", chapters: 13 },
+    { id: 59, name: "Tiago", abbrev: "tg", chapters: 5 },
+    { id: 60, name: "1 Pedro", abbrev: "1pe", chapters: 5 },
+    { id: 61, name: "2 Pedro", abbrev: "2pe", chapters: 3 },
+    { id: 62, name: "1 João", abbrev: "1jn", chapters: 5 },
+    { id: 63, name: "2 João", abbrev: "2jn", chapters: 1 },
+    { id: 64, name: "3 João", abbrev: "3jn", chapters: 1 },
+    { id: 65, name: "Judas", abbrev: "jd", chapters: 1 },
+    { id: 66, name: "Apocalipse", abbrev: "re", chapters: 22 }
+];
 
 async function initBible() {
     const versionSelector = document.getElementById('version-selector');
@@ -377,34 +446,35 @@ async function initBible() {
 
     if (!bookSelector || !chapterSelector || !textContainer) return;
 
-    try {
-        // Busca a lista de livros da API
-        const response = await fetch('https://www.abibliadigital.com.br/api/books');
-        bibleBooksData = await response.json();
+    // Atualiza versões para os códigos da Bolls.life
+    versionSelector.innerHTML = `
+        <option value="NVIPT">NVI</option>
+        <option value="ARAV">ARA</option>
+        <option value="ARC">ARC</option>
+        <option value="KJV">KJV</option>
+    `;
 
-        // Popula Livros
-        bookSelector.innerHTML = bibleBooksData.map(book =>
-            `<option value="${book.abbrev.pt}">${book.name}</option>`
-        ).join('');
+    bibleBooksData = BIBLE_BOOKS_FALLBACK;
 
-        // Listeners
-        versionSelector.addEventListener('change', () => loadVerses());
-        bookSelector.addEventListener('change', () => updateChapters());
-        chapterSelector.addEventListener('change', () => loadVerses());
+    // Popula Livros
+    bookSelector.innerHTML = bibleBooksData.map(book =>
+        `<option value="${book.id}">${book.name}</option>`
+    ).join('');
 
-        updateChapters();
-    } catch (error) {
-        console.error("Erro ao carregar livros da Bíblia:", error);
-        textContainer.innerHTML = "<p style='color:red'>Erro ao carregar a Bíblia. Verifique sua conexão.</p>";
-    }
+    // Listeners
+    versionSelector.addEventListener('change', () => loadVerses());
+    bookSelector.addEventListener('change', () => updateChapters());
+    chapterSelector.addEventListener('change', () => loadVerses());
+
+    updateChapters();
 }
 
 function updateChapters() {
     const bookSelector = document.getElementById('book-selector');
     const chapterSelector = document.getElementById('chapter-selector');
-    const selectedAbbrev = bookSelector.value;
+    const selectedId = parseInt(bookSelector.value);
 
-    const book = bibleBooksData.find(b => b.abbrev.pt === selectedAbbrev);
+    const book = bibleBooksData.find(b => b.id === selectedId);
     if (book) {
         let options = "";
         for (let i = 1; i <= book.chapters; i++) {
@@ -418,30 +488,40 @@ function updateChapters() {
 async function loadVerses() {
     const textContainer = document.getElementById('bible-text');
     const version = document.getElementById('version-selector').value;
-    const abbrev = document.getElementById('book-selector').value;
+    const bookId = document.getElementById('book-selector').value;
     const chapter = document.getElementById('chapter-selector').value;
 
-    textContainer.innerHTML = "<p style='text-align:center; opacity:0.5'>Carregando...</p>";
+    textContainer.innerHTML = "<p style='text-align:center; opacity:0.5; padding: 20px;'>Buscando palavra sagrada...</p>";
 
     try {
-        const response = await fetch(`https://www.abibliadigital.com.br/api/verses/${version}/${abbrev}/${chapter}`);
-        const data = await response.json();
+        // API Bolls.life: Versão / ID Livro / Capítulo
+        const response = await fetch(`https://bolls.life/get-chapter/${version}/${bookId}/${chapter}/`);
 
-        if (data.verses && data.verses.length > 0) {
-            textContainer.innerHTML = data.verses.map(v => `
+        if (!response.ok) throw new Error("Erro na conexão com o servidor da Bíblia.");
+
+        const verses = await response.json();
+
+        if (verses && verses.length > 0) {
+            textContainer.innerHTML = verses.map(v => `
                 <p style="margin-bottom:15px; line-height:1.6">
-                    <span style="color:var(--gold); font-weight:bold; margin-right:10px; font-size:0.9em">${v.number}</span>
+                    <span style="color:var(--gold); font-weight:bold; margin-right:10px; font-size:0.9em">${v.verse}</span>
                     ${v.text}
                 </p>
             `).join('');
         } else {
-            textContainer.innerHTML = "<p>Nenhum versículo encontrado para este capítulo.</p>";
+            textContainer.innerHTML = "<p style='padding:20px; text-align:center'>Nenhum versículo encontrado.</p>";
         }
-        textContainer.scrollTop = 0;
     } catch (error) {
-        console.error("Erro ao carregar versículos:", error);
-        textContainer.innerHTML = "<p style='color:red'>Erro ao carregar versículos. Tente novamente.</p>";
+        console.error("Erro Bíblia:", error);
+        textContainer.innerHTML = `
+            <div style="text-align:center; padding:20px">
+                <p style="color:var(--gold)">Não foi possível carregar este capítulo.</p>
+                <p style="font-size:12px; opacity:0.7; margin-top:10px">Tente trocar a versão ou verifique sua internet.</p>
+                <button class="btn-gold" style="margin-top:20px; padding:8px 15px; font-size:12px" onclick="loadVerses()">Tentar Novamente</button>
+            </div>
+        `;
     }
+    textContainer.scrollTop = 0;
 }
 
 function loadDevotional(mood = null) {

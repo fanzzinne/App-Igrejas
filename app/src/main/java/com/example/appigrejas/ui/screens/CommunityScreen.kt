@@ -6,6 +6,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import kotlinx.coroutines.launch
 import com.example.appigrejas.util.VideoUtils
-import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.example.appigrejas.data.model.LeaderMessage
 import com.example.appigrejas.data.model.Ministry
@@ -69,7 +70,7 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
                 0 -> MinistryList(viewModel)
                 1 -> LeaderMessagesList(viewModel)
                 2 -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item { PrayerRequestForm() }
+                    item { PrayerRequestForm(viewModel) }
                     item { AppFooter() }
                 }
             }
@@ -203,18 +204,37 @@ fun VideoPlayer(url: String, modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrayerRequestForm() {
+fun PrayerRequestForm(viewModel: CommunityViewModel) {
+    var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Geral") }
     var message by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    val categories = listOf("Saúde", "Família", "Finanças", "Trabalho", "Geral")
+    val categories = listOf("Saúde", "Família", "Finanças", "Trabalho", "Relacionamento", "Geral")
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text(text = "Fale conosco", color = Gold, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(text = "Deixe seu pedido de oração e nossa equipe estará intercedendo por você.", color = Color.Gray, fontSize = 14.sp)
         
         Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Seu Nome", color = Gold) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Gold,
+                unfocusedBorderColor = Gold.copy(alpha = 0.5f),
+                focusedLabelColor = Gold,
+                cursorColor = Gold,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -226,10 +246,12 @@ fun PrayerRequestForm() {
                 readOnly = true,
                 label = { Text("Categoria", color = Gold) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Gold,
                     unfocusedBorderColor = Gold.copy(alpha = 0.5f),
-                    focusedLabelColor = Gold
+                    focusedLabelColor = Gold,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
                 ),
                 modifier = Modifier.fillMaxWidth().menuAnchor()
             )
@@ -261,26 +283,50 @@ fun PrayerRequestForm() {
                 focusedBorderColor = Gold,
                 unfocusedBorderColor = Gold.copy(alpha = 0.5f),
                 focusedLabelColor = Gold,
-                cursorColor = Gold
+                cursorColor = Gold,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
             )
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        var isSending by remember { mutableStateOf(false) }
+
         Button(
             onClick = {
-                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:contato@igreja.com")
-                    putExtra(Intent.EXTRA_SUBJECT, "Pedido de Oração - $category")
-                    putExtra(Intent.EXTRA_TEXT, message)
+                if (name.isNotBlank() && message.isNotBlank()) {
+                    isSending = true
+                    coroutineScope.launch {
+                        val success = viewModel.submitPrayerRequest(
+                            name = name,
+                            phone = "", // Could add a field for this
+                            category = category,
+                            message = message
+                        )
+                        isSending = false
+                        if (success) {
+                            Toast.makeText(context, "Pedido de oração enviado!", Toast.LENGTH_LONG).show()
+                            name = ""
+                            message = ""
+                        } else {
+                            Toast.makeText(context, "Erro ao enviar pedido. Tente novamente.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, "Preencha todos os campos", Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(Intent.createChooser(intent, "Enviar email..."))
             },
+            enabled = !isSending,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Gold),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "Enviar Pedido", color = Color.Black, fontWeight = FontWeight.Bold)
+            if (isSending) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.Black)
+            } else {
+                Text(text = "Enviar Pedido", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

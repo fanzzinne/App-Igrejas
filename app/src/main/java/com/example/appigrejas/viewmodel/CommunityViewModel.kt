@@ -26,4 +26,8 @@ class CommunityViewModel(private val repository: CommunityRepository = Community
             repository.getLeaderMessages().collect { _messages.value = it }
         }
     }
+
+    suspend fun submitPrayerRequest(name: String, phone: String, category: String, message: String): Boolean {
+        return repository.submitPrayerRequest(name, phone, category, message)
+    }
 }

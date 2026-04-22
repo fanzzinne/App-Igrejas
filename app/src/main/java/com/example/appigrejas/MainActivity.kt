@@ -1,6 +1,9 @@
 package com.example.appigrejas
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.example.appigrejas.data.remote.BannerResponse
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -39,6 +44,7 @@ import com.example.appigrejas.ui.components.AppFooter
 import com.example.appigrejas.ui.screens.*
 import com.example.appigrejas.ui.theme.AppIgrejasTheme
 import com.example.appigrejas.ui.theme.Gold
+import com.example.appigrejas.viewmodel.HomeViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,9 +67,11 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Giving : Screen("giving", "Contribuição", Icons.Default.Paid)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(homeViewModel: HomeViewModel = viewModel()) {
     val navController = rememberNavController()
+    val uiState by homeViewModel.uiState.collectAsState()
     val items = listOf(
         Screen.Home,
         Screen.Media,
@@ -72,6 +80,47 @@ fun MainScreen() {
     )
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(32.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = Gold.copy(alpha = 0.1f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
+                        ) {
+                            if (uiState?.config?.LogoUrl != null) {
+                                AsyncImage(
+                                    model = uiState?.config?.LogoUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.padding(4.dp)
+                                )
+                            } else {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = uiState?.config?.NomeIgreja ?: "App Igrejas",
+                            color = Gold,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Notificações */ }) {
+                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Gold)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+            )
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = Color.Black,
@@ -112,12 +161,17 @@ fun MainScreen() {
         ) {
             composable(Screen.Home.route) { 
                 HomeScreen(
+                    viewModel = homeViewModel,
                     onActionClick = { action ->
                         when (action) {
                             "Bíblia" -> navController.navigate(Screen.Bible.route)
-                            "Oração" -> navController.navigate(Screen.Community.route)
+                            "Oração" -> {
+                                navController.navigate(Screen.Community.route)
+                            }
                             "Contribuição" -> navController.navigate(Screen.Giving.route)
-                            "Ao Vivo" -> navController.navigate(Screen.Media.route)
+                            "Ao Vivo" -> {
+                                // Handled in QuickActionsGrid
+                            }
                             "Eventos" -> navController.navigate(Screen.Community.route)
                         }
                     },
@@ -130,7 +184,7 @@ fun MainScreen() {
             composable(Screen.Bible.route) { BibleTabScreen() }
             composable(Screen.Community.route) { CommunityScreen() }
             composable(Screen.Devotional.route) { DevotionalScreen() }
-            composable(Screen.Giving.route) { DigitalGivingScreen() }
+            composable(Screen.Giving.route) { DigitalGivingScreen(homeViewModel) }
         }
     }
 }
@@ -168,7 +222,14 @@ fun BibleTabScreen() {
 }
 
 @Composable
-fun HomeScreen(onActionClick: (String) -> Unit = {}, onDevotionalClick: () -> Unit = {}) {
+fun HomeScreen(
+    viewModel: HomeViewModel = viewModel(),
+    onActionClick: (String) -> Unit = {},
+    onDevotionalClick: () -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val localContext = LocalContext.current
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -177,17 +238,28 @@ fun HomeScreen(onActionClick: (String) -> Unit = {}, onDevotionalClick: () -> Un
     ) {
         // Banner Carousel
         item {
-            BannerCarousel()
+            BannerCarousel(uiState?.banners ?: emptyList())
         }
 
         // Quick Actions
         item {
-            QuickActionsGrid(onActionClick)
+            QuickActionsGrid(onActionClick = { action ->
+                if (action == "Ao Vivo") {
+                    val liveUrl = uiState?.config?.LinkAoVivo ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(liveUrl))
+                    localContext.startActivity(intent)
+                } else {
+                    onActionClick(action)
+                }
+            })
         }
 
-        // Humor Bar Placeholder
+        // Humor Bar
         item {
-            HumorBar()
+            HumorBar(onMoodClick = { mood ->
+                onActionClick("Bíblia")
+                // In a real app, we would pass the mood to the Bible/Devotional screen via a SharedViewModel or Navigation argument
+            })
         }
 
         // News/Events Horizontal Grid
@@ -229,7 +301,7 @@ fun HomeScreen(onActionClick: (String) -> Unit = {}, onDevotionalClick: () -> Un
 }
 
 @Composable
-fun BannerCarousel() {
+fun BannerCarousel(banners: List<BannerResponse>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,26 +310,50 @@ fun BannerCarousel() {
             .clip(RoundedCornerShape(16.dp))
             .background(Color.DarkGray)
     ) {
-        AsyncImage(
-            model = "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=1000",
-            contentDescription = "Banner",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f))
-        )
-        Text(
-            text = "Culto de Celebração\nDomingo às 19h",
-            color = Gold,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp)
-        )
+        if (banners.isNotEmpty()) {
+            val banner = banners[0]
+            AsyncImage(
+                model = banner.ImagemUrl,
+                contentDescription = "Banner",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+            )
+            Text(
+                text = banner.Titulo,
+                color = Gold,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            )
+        } else {
+            AsyncImage(
+                model = "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=1000",
+                contentDescription = "Banner",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+            )
+            Text(
+                text = "Culto de Celebração\nDomingo às 19h",
+                color = Gold,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            )
+        }
     }
 }
 
@@ -309,7 +405,7 @@ fun QuickActionsGrid(onActionClick: (String) -> Unit) {
 data class QuickAction(val label: String, val icon: ImageVector)
 
 @Composable
-fun HumorBar() {
+fun HumorBar(onMoodClick: (String) -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -328,13 +424,23 @@ fun HumorBar() {
             Text(
                 text = "Como você está se sentindo hoje?",
                 color = Gold,
-                fontSize = 14.sp
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f)
             )
-            Icon(
-                imageVector = Icons.Default.SentimentSatisfied,
-                contentDescription = null,
-                tint = Gold
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconButton(onClick = { onMoodClick("Feliz") }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.SentimentVerySatisfied, contentDescription = "Feliz", tint = Gold)
+                }
+                IconButton(onClick = { onMoodClick("Triste") }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.SentimentVeryDissatisfied, contentDescription = "Triste", tint = Gold)
+                }
+                IconButton(onClick = { onMoodClick("Grato") }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.VolunteerActivism, contentDescription = "Grato", tint = Gold)
+                }
+                IconButton(onClick = { onMoodClick("Cansado") }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.BatteryAlert, contentDescription = "Cansado", tint = Gold)
+                }
+            }
         }
     }
 }

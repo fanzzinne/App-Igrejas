@@ -34,4 +34,13 @@ object RetrofitClient {
             .build()
             .create(ChurchApiService::class.java)
     }
+
+    val bibleApi: BollsBibleApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://bolls.life/")
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .client(client)
+            .build()
+            .create(BollsBibleApi::class.java)
+    }
 }

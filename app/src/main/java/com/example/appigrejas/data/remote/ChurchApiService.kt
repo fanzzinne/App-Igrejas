@@ -17,7 +17,16 @@ data class ChurchResponse(
     @Json(name = "eventos") val eventos: List<EventResponse> = emptyList(),
     @Json(name = "sermoes") val sermoes: List<SermonResponse> = emptyList(),
     @Json(name = "ministerios") val ministerios: List<MinistryResponse> = emptyList(),
-    @Json(name = "mensagemLider") val mensagemLider: List<LeaderMessageResponse> = emptyList()
+    @Json(name = "mensagemLider") val mensagemLider: List<LeaderMessageResponse> = emptyList(),
+    @Json(name = "config") val config: ConfigResponse? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ConfigResponse(
+    val NomeIgreja: String? = null,
+    val LogoUrl: String? = null,
+    val LinkAoVivo: String? = null,
+    val ChavePix: String? = null
 )
 
 @JsonClass(generateAdapter = true)
