@@ -367,59 +367,81 @@ function showCommunitySection(section, btn) {
     }
 }
 
-const BIBLE_BOOKS = [
-    "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel",
-    "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios",
-    "Eclesiastes", "Cânticos", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oseias", "Joel", "Amós",
-    "Obadias", "Jonas", "Miqueias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias",
-    "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios",
-    "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom",
-    "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse"
-];
+let bibleBooksData = [];
 
-function initBible() {
+async function initBible() {
+    const versionSelector = document.getElementById('version-selector');
     const bookSelector = document.getElementById('book-selector');
     const chapterSelector = document.getElementById('chapter-selector');
     const textContainer = document.getElementById('bible-text');
 
     if (!bookSelector || !chapterSelector || !textContainer) return;
 
-    // Popula Livros
-    bookSelector.innerHTML = BIBLE_BOOKS.map(book => `<option value="${book}">${book}</option>`).join('');
+    try {
+        // Busca a lista de livros da API
+        const response = await fetch('https://www.abibliadigital.com.br/api/books');
+        bibleBooksData = await response.json();
 
-    // Listener para mudar capítulos (simulação)
-    bookSelector.addEventListener('change', () => updateChapters());
-    chapterSelector.addEventListener('change', () => loadVerses());
+        // Popula Livros
+        bookSelector.innerHTML = bibleBooksData.map(book =>
+            `<option value="${book.abbrev.pt}">${book.name}</option>`
+        ).join('');
 
-    updateChapters();
+        // Listeners
+        versionSelector.addEventListener('change', () => loadVerses());
+        bookSelector.addEventListener('change', () => updateChapters());
+        chapterSelector.addEventListener('change', () => loadVerses());
+
+        updateChapters();
+    } catch (error) {
+        console.error("Erro ao carregar livros da Bíblia:", error);
+        textContainer.innerHTML = "<p style='color:red'>Erro ao carregar a Bíblia. Verifique sua conexão.</p>";
+    }
 }
 
 function updateChapters() {
+    const bookSelector = document.getElementById('book-selector');
     const chapterSelector = document.getElementById('chapter-selector');
-    // Simula quantidade de capítulos
-    const chapters = Math.floor(Math.random() * 20) + 10;
-    let options = "";
-    for(let i=1; i<=chapters; i++) {
-        options += `<option value="${i}">${i}</option>`;
+    const selectedAbbrev = bookSelector.value;
+
+    const book = bibleBooksData.find(b => b.abbrev.pt === selectedAbbrev);
+    if (book) {
+        let options = "";
+        for (let i = 1; i <= book.chapters; i++) {
+            options += `<option value="${i}">${i}</option>`;
+        }
+        chapterSelector.innerHTML = options;
+        loadVerses();
     }
-    chapterSelector.innerHTML = options;
-    loadVerses();
 }
 
-function loadVerses() {
+async function loadVerses() {
     const textContainer = document.getElementById('bible-text');
-    const book = document.getElementById('book-selector').value;
+    const version = document.getElementById('version-selector').value;
+    const abbrev = document.getElementById('book-selector').value;
     const chapter = document.getElementById('chapter-selector').value;
 
-    let verses = "";
-    for(let i=1; i<=20; i++) {
-        verses += `<p style="margin-bottom:15px; line-height:1.6">
-            <span style="color:var(--gold); font-weight:bold; margin-right:10px; font-size:0.9em">${i}</span>
-            Exemplo de versículo para o livro de ${book}, capítulo ${chapter}. A palavra do Senhor permanece para sempre.
-        </p>`;
+    textContainer.innerHTML = "<p style='text-align:center; opacity:0.5'>Carregando...</p>";
+
+    try {
+        const response = await fetch(`https://www.abibliadigital.com.br/api/verses/${version}/${abbrev}/${chapter}`);
+        const data = await response.json();
+
+        if (data.verses && data.verses.length > 0) {
+            textContainer.innerHTML = data.verses.map(v => `
+                <p style="margin-bottom:15px; line-height:1.6">
+                    <span style="color:var(--gold); font-weight:bold; margin-right:10px; font-size:0.9em">${v.number}</span>
+                    ${v.text}
+                </p>
+            `).join('');
+        } else {
+            textContainer.innerHTML = "<p>Nenhum versículo encontrado para este capítulo.</p>";
+        }
+        textContainer.scrollTop = 0;
+    } catch (error) {
+        console.error("Erro ao carregar versículos:", error);
+        textContainer.innerHTML = "<p style='color:red'>Erro ao carregar versículos. Tente novamente.</p>";
     }
-    textContainer.innerHTML = verses;
-    textContainer.scrollTop = 0;
 }
 
 function loadDevotional(mood = null) {
