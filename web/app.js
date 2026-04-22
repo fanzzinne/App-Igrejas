@@ -367,14 +367,59 @@ function showCommunitySection(section, btn) {
     }
 }
 
+const BIBLE_BOOKS = [
+    "Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio", "Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel",
+    "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Ester", "Jó", "Salmos", "Provérbios",
+    "Eclesiastes", "Cânticos", "Isaías", "Jeremias", "Lamentações", "Ezequiel", "Daniel", "Oseias", "Joel", "Amós",
+    "Obadias", "Jonas", "Miqueias", "Naum", "Habacuque", "Sofonias", "Ageu", "Zacarias", "Malaquias",
+    "Mateus", "Marcos", "Lucas", "João", "Atos", "Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios",
+    "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filemom",
+    "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas", "Apocalipse"
+];
+
 function initBible() {
-    const text = document.getElementById('bible-text');
-    if (!text) return;
-    let verses = "";
-    for(let i=1; i<=10; i++) {
-        verses += `<p style="margin-bottom:15px"><span style="color:var(--gold); font-weight:bold; margin-right:10px">${i}</span> No princípio Deus criou os céus e a terra. E a terra era sem forma e vazia...</p>`;
+    const bookSelector = document.getElementById('book-selector');
+    const chapterSelector = document.getElementById('chapter-selector');
+    const textContainer = document.getElementById('bible-text');
+
+    if (!bookSelector || !chapterSelector || !textContainer) return;
+
+    // Popula Livros
+    bookSelector.innerHTML = BIBLE_BOOKS.map(book => `<option value="${book}">${book}</option>`).join('');
+
+    // Listener para mudar capítulos (simulação)
+    bookSelector.addEventListener('change', () => updateChapters());
+    chapterSelector.addEventListener('change', () => loadVerses());
+
+    updateChapters();
+}
+
+function updateChapters() {
+    const chapterSelector = document.getElementById('chapter-selector');
+    // Simula quantidade de capítulos
+    const chapters = Math.floor(Math.random() * 20) + 10;
+    let options = "";
+    for(let i=1; i<=chapters; i++) {
+        options += `<option value="${i}">${i}</option>`;
     }
-    text.innerHTML = verses;
+    chapterSelector.innerHTML = options;
+    loadVerses();
+}
+
+function loadVerses() {
+    const textContainer = document.getElementById('bible-text');
+    const book = document.getElementById('book-selector').value;
+    const chapter = document.getElementById('chapter-selector').value;
+
+    let verses = "";
+    for(let i=1; i<=20; i++) {
+        verses += `<p style="margin-bottom:15px; line-height:1.6">
+            <span style="color:var(--gold); font-weight:bold; margin-right:10px; font-size:0.9em">${i}</span>
+            Exemplo de versículo para o livro de ${book}, capítulo ${chapter}. A palavra do Senhor permanece para sempre.
+        </p>`;
+    }
+    textContainer.innerHTML = verses;
+    textContainer.scrollTop = 0;
 }
 
 function loadDevotional(mood = null) {
