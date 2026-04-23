@@ -201,14 +201,14 @@ fun MainScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp) // Altura suficiente para o logo de 110dp
+                            .height(100.dp) // Aumentado ligeiramente para acomodar o logo maior sem ser excessivo como antes
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         if (!(isMedium || isExpanded)) {
                             Box(
-                                modifier = Modifier.size(110.dp),
+                                modifier = Modifier.size(90.dp), // Logo aumentado para ser visível mas dentro da área reduzida
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
@@ -303,7 +303,7 @@ fun MainScreen(
                                 }
                                 "Contribuição" -> navController.navigate(Screen.Giving.route)
                                 "Mural" -> {
-                                    navController.navigate(Screen.Community.route + "?tab=1")
+                                    navController.navigate(Screen.Community.route + "?tab=99")
                                 }
                                 "Agenda Semanal" -> navController.navigate(Screen.Community.route)
                             }
@@ -467,7 +467,7 @@ fun BannerCarousel(banners: List<BannerResponse>, isExpanded: Boolean = false) {
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
-            .padding(16.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 0.dp) // Removido padding superior para subir o banner
             .clip(RoundedCornerShape(16.dp))
             .background(Color.DarkGray)
     ) {

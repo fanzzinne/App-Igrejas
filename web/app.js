@@ -227,8 +227,8 @@ function setupBranding(data = null) {
         }
         if (headerLogo) {
             headerLogo.innerHTML = `<img src="${logoUrl}" alt="Logo" style="height: 100%; width: 100%; object-fit: contain">`;
-            headerLogo.style.height = "110px";
-            headerLogo.style.width = "110px";
+            headerLogo.style.height = "90px";
+            headerLogo.style.width = "90px";
             headerLogo.style.background = "none";
             headerLogo.style.border = "none";
         }
@@ -267,6 +267,8 @@ function navigateTo(targetId, elementOrIndex) {
     if (target) target.classList.add('active');
 
     if (targetId === 'community') {
+        const tabs = document.getElementById('community-tabs');
+        if (tabs) tabs.style.display = 'flex';
         showCommunitySection('ministries');
     }
 }
@@ -348,8 +350,14 @@ function renderContent(data) {
     }
 }
 
-function showCommunitySection(section, btn) {
+function showCommunitySection(section, btn, isMural = false) {
     const content = document.getElementById('com-content');
+    const tabs = document.getElementById('community-tabs');
+
+    if (isMural && tabs) {
+        tabs.style.display = 'none';
+    }
+
     if (btn) {
         btn.parentNode.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -372,9 +380,9 @@ function showCommunitySection(section, btn) {
         const list = window.appData?.mensagemLider || MOCK_DATA.mensagemLider;
         content.innerHTML = `
             <div class="section-container" style="padding-top:20px; text-align:center">
-                <i class="fas fa-user-tie" style="font-size:50px; color:var(--gold); margin-bottom:20px"></i>
-                <h4 style="color:var(--gold)">Mensagens da Liderança</h4>
-                <p style="margin-top:10px; opacity:0.8; margin-bottom:30px">Assista às palavras de fé dos nossos pastores.</p>
+                ${isMural ? '<h2 style="color:var(--gold); margin-bottom:20px">Mural da Liderança</h2>' : '<i class="fas fa-user-tie" style="font-size:50px; color:var(--gold); margin-bottom:20px"></i>'}
+                ${isMural ? '' : '<h4 style="color:var(--gold)">Mensagens da Liderança</h4>'}
+                ${isMural ? '' : '<p style="margin-top:10px; opacity:0.8; margin-bottom:30px">Assista às palavras de fé dos nossos pastores.</p>'}
 
                 <div style="text-align:left">
                     ${list.map(msg => {

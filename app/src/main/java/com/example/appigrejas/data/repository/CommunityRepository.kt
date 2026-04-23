@@ -7,6 +7,8 @@ import com.example.appigrejas.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import android.util.Log
+import java.text.SimpleDateFormat
+import java.util.*
 
 class CommunityRepository {
     private val apiService = RetrofitClient.apiService
@@ -114,17 +116,19 @@ class CommunityRepository {
         }
     }
 
-    suspend fun submitGivingReceipt(name: String, amount: String, date: String): Boolean {
+    suspend fun submitGiving(subtipo: String, nome: String, valor: String): Boolean {
         return try {
             val data = mapOf(
                 "type" to "giving",
-                "nome" to name,
-                "valor" to amount,
-                "data" to date
+                "subtipo" to subtipo,
+                "nome" to nome.ifBlank { "Anônimo" },
+                "valor" to valor,
+                "data" to SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
             )
             val response = apiService.submitForm(data)
             response.status == "success"
         } catch (e: Exception) {
+            Log.e("CommunityRepository", "Error submitting giving", e)
             false
         }
     }

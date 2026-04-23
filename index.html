@@ -60,7 +60,7 @@
     <header>
         <div class="header-content">
             <div class="header-branding" onclick="navigateTo('home', 0)">
-                <div id="header-logo-placeholder" class="header-logo" style="height: 110px; width: 110px; display: flex; align-items: center; justify-content: center">
+                <div id="header-logo-placeholder" class="header-logo" style="height: 90px; width: 90px; display: flex; align-items: center; justify-content: center">
                     <img src="https://i.ibb.co/tMg1KQyD/Logo-dourado.png" alt="Logo" style="height: 100%; width: 100%; object-fit: contain">
                 </div>
             </div>
@@ -83,7 +83,7 @@
 
             <!-- Quick Actions -->
             <div class="quick-actions">
-                <div class="action-btn" onclick="navigateTo('community', 3); showCommunitySection('leadership')">
+                <div class="action-btn" onclick="navigateTo('community', 3); showCommunitySection('leadership', null, true)">
                     <div class="icon-circle"><i class="fas fa-bullhorn"></i></div>
                     <span>Mural</span>
                 </div>
@@ -173,9 +173,8 @@
         </section>
 
         <section id="community" class="view">
-            <div class="tabs">
+            <div class="tabs" id="community-tabs">
                 <button class="tab-btn active" onclick="showCommunitySection('ministries', this)">Ministérios</button>
-                <button class="tab-btn" onclick="showCommunitySection('leadership', this)">Liderança</button>
                 <button class="tab-btn" onclick="showCommunitySection('events', this)">Agenda Semanal</button>
             </div>
             <div id="com-content">

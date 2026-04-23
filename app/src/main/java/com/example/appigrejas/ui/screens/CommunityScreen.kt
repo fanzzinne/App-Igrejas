@@ -49,39 +49,60 @@ fun CommunityScreen(
     tabIndex: Int = 0,
     viewModel: CommunityViewModel = viewModel()
 ) {
-    var selectedTab by remember { mutableIntStateOf(tabIndex) }
-    val tabs = listOf("Ministérios", "Liderança", "Agenda Semanal", "Pedidos de Oração")
+    val isMural = tabIndex == 99
+    // Adicionado remember(tabIndex) para reagir a mudanças na navegação
+    var selectedTab by remember(tabIndex) { mutableIntStateOf(if (isMural) 0 else tabIndex) }
+    val tabs = listOf("Ministérios", "Agenda Semanal", "Pedidos de Oração")
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        ScrollableTabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.Black,
-            contentColor = Gold,
-            edgePadding = 16.dp,
-            divider = {},
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = Gold
-                )
-            }
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(text = title, fontSize = 14.sp, color = if (selectedTab == index) Gold else Color.Gray) }
-                )
+        if (isMural) {
+            Text(
+                text = "Mural da Liderança",
+                color = Gold,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp)
+            )
+        } else {
+            ScrollableTabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Black,
+                contentColor = Gold,
+                edgePadding = 16.dp,
+                divider = {},
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Gold
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                text = title,
+                                fontSize = 14.sp,
+                                color = if (selectedTab == index) Gold else Color.Gray
+                            )
+                        }
+                    )
+                }
             }
         }
 
         Box(modifier = Modifier.weight(1f)) {
-            when (selectedTab) {
-                0 -> MinistryList(viewModel, isExpanded)
-                1 -> LeaderMessagesList(viewModel, isExpanded)
-                2 -> WeeklyAgendaList(viewModel, isExpanded)
-                3 -> PrayerRequestScreen(viewModel, isExpanded)
+            if (isMural) {
+                LeaderMessagesList(viewModel, isExpanded)
+            } else {
+                when (selectedTab) {
+                    0 -> MinistryList(viewModel, isExpanded)
+                    1 -> WeeklyAgendaList(viewModel, isExpanded)
+                    2 -> PrayerRequestScreen(viewModel, isExpanded)
+                }
             }
         }
     }
