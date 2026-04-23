@@ -35,4 +35,8 @@ class CommunityViewModel(private val repository: CommunityRepository = Community
     suspend fun submitPrayerRequest(name: String, phone: String, category: String, message: String): Boolean {
         return repository.submitPrayerRequest(name, phone, category, message)
     }
+
+    suspend fun submitGiving(subtipo: String, nome: String, valor: String): Boolean {
+        return repository.submitGiving(subtipo, nome, valor)
+    }
 }

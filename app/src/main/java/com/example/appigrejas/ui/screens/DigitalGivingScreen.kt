@@ -26,21 +26,50 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appigrejas.ui.components.AppFooter
 import com.example.appigrejas.ui.theme.Gold
+import com.example.appigrejas.viewmodel.CommunityViewModel
 import com.example.appigrejas.viewmodel.HomeViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun DigitalGivingScreen(
     windowSizeClass: WindowSizeClass,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    communityViewModel: CommunityViewModel = viewModel()
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val pixKey = uiState?.config?.ChavePix ?: "00.000.000/0001-00"
+    val coroutineScope = rememberCoroutineScope()
+    
+    val pixKey = remember(uiState) {
+        val configData = uiState?.config ?: uiState?.configuracoes
+        val map = when (configData) {
+            is Map<*, *> -> configData
+            is List<*> -> configData.firstOrNull() as? Map<*, *>
+            else -> null
+        }
+        
+        fun Map<*, *>.findKey(vararg keys: String): String? {
+            for (key in keys) {
+                val value = this[key] as? String
+                if (!value.isNullOrBlank() && value.lowercase() != "undefined") return value.trim()
+                val foundKey = this.keys.find { it.toString().equals(key, ignoreCase = true) }
+                if (foundKey != null) {
+                    val anyValue = this[foundKey] as? String
+                    if (!anyValue.isNullOrBlank() && anyValue.lowercase() != "undefined") return anyValue.trim()
+                }
+            }
+            return null
+        }
+
+        map?.findKey("ChavePix", "Pix", "Chave") ?: "00.000.000/0001-00"
+    }
+
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var selectedType by remember { mutableIntStateOf(0) } // 0: Dízimo, 1: Oferta
+    var isSending by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
@@ -161,19 +190,37 @@ fun DigitalGivingScreen(
                 Button(
                     onClick = {
                         if (amount.isNotBlank()) {
-                            Toast.makeText(context, "Informação de envio registrada!", Toast.LENGTH_LONG).show()
-                            name = ""
-                            amount = ""
+                            isSending = true
+                            coroutineScope.launch {
+                                val success = communityViewModel.submitGiving(
+                                    subtipo = if (selectedType == 0) "Dízimo" else "Oferta",
+                                    nome = name,
+                                    valor = amount
+                                )
+                                isSending = false
+                                if (success) {
+                                    Toast.makeText(context, "Informação de envio registrada!", Toast.LENGTH_LONG).show()
+                                    name = ""
+                                    amount = ""
+                                } else {
+                                    Toast.makeText(context, "Erro ao enviar. Tente novamente.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         } else {
                             Toast.makeText(context, "Informe o valor", Toast.LENGTH_SHORT).show()
                         }
                     },
+                    enabled = !isSending,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
                 ) {
-                    Text(text = "Informar Envio", color = Gold, fontWeight = FontWeight.Bold)
+                    if (isSending) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Gold)
+                    } else {
+                        Text(text = "Informar Envio", color = Gold, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
