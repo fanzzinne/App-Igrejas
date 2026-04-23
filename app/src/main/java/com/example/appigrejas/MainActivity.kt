@@ -194,29 +194,35 @@ fun MainScreen(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start, // Mantém à esquerda como solicitado implicitamente
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (!(isMedium || isExpanded)) {
-                                Box(
-                                    modifier = Modifier.size(110.dp).padding(4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    AsyncImage(
-                                        model = churchConfig.LogoUrl ?: defaultLogo,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
+                Surface(
+                    color = Color.Black,
+                    modifier = Modifier.statusBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp) // Altura suficiente para o logo de 110dp
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (!(isMedium || isExpanded)) {
+                            Box(
+                                modifier = Modifier.size(110.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = churchConfig.LogoUrl ?: defaultLogo,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
+                        } else {
+                            // Se for tablet, apenas um espaçador para manter o botão à direita
+                            Spacer(modifier = Modifier.weight(1f))
                         }
-                    },
-                    actions = {
+
                         Button(
                             onClick = {
                                 val liveUrl = churchConfig.LinkAoVivo ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
@@ -226,7 +232,7 @@ fun MainScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF0000)),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                             shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier.padding(end = 4.dp).height(28.dp)
+                            modifier = Modifier.height(28.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -244,9 +250,8 @@ fun MainScreen(
                                 )
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-                )
+                    }
+                }
             },
             bottomBar = {
                 if (!(isMedium || isExpanded)) {
