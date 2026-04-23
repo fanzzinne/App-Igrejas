@@ -392,10 +392,14 @@ function showCommunitySection(section, btn) {
             <div class="section-container" style="padding-top:20px">
                 <h4 style="color:var(--gold); margin-bottom:20px; text-align:center">Agenda Semanal</h4>
                 ${list.map(ev => {
-                    const dia = ev.Data || ev.Dia || "";
+                    const diaRaw = ev.Data || ev.Dia || "";
                     const titulo = ev.Titulo || ev.Evento || "";
-                    const hora = ev.Horario || ev.Hora || "";
+                    const horaRaw = ev.Horario || ev.Hora || "";
                     const local = ev.Local || "";
+
+                    // Formatação de Data e Hora no padrão Brasil
+                    const dia = formatDateBR(diaRaw, true) || diaRaw;
+                    const hora = (horaRaw && horaRaw.includes(':')) ? horaRaw : (formatDateBR(horaRaw) ? formatDateBR(horaRaw).split(' às ')[1] : horaRaw);
 
                     return `
                         <div class="devotional-card" style="margin-bottom:16px; border-left: 4px solid var(--gold); padding: 16px; display: flex; align-items: center; gap: 15px">

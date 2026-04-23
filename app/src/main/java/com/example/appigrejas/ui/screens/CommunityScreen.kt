@@ -40,6 +40,8 @@ import com.example.appigrejas.ui.theme.Gold
 import com.example.appigrejas.util.VideoUtils
 import com.example.appigrejas.viewmodel.CommunityViewModel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun CommunityScreen(
@@ -106,17 +108,44 @@ fun WeeklyAgendaList(viewModel: CommunityViewModel, isExpanded: Boolean) {
 
 @Composable
 fun AgendaCard(event: EventResponse) {
-    // Função auxiliar para limpar textos "undefined" ou nulos vindo da API
-    fun cleanText(text: String?): String {
-        return if (text == null || text.trim().lowercase() == "undefined" || text.trim().isEmpty()) "" else text.trim()
+    // Função para formatar data/hora para o padrão Brasil
+    fun formatToBR(value: String?, isTime: Boolean = false): String {
+        if (value == null || value.isBlank() || value.lowercase() == "undefined") return ""
+        
+        return try {
+            // Tenta detectar se é uma data completa ISO (comum em APIs)
+            val inputFormat = if (value.contains("T")) {
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+            } else if (value.contains("-")) {
+                SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            } else {
+                null
+            }
+
+            if (inputFormat != null) {
+                inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val date = inputFormat.parse(value)
+                val outputFormat = if (isTime) {
+                    SimpleDateFormat("HH:mm", Locale("pt", "BR"))
+                } else {
+                    SimpleDateFormat("dd/MM", Locale("pt", "BR"))
+                }
+                outputFormat.timeZone = TimeZone.getTimeZone("America/Sao_Paulo")
+                date?.let { outputFormat.format(it) } ?: value
+            } else {
+                value // Se não for data ISO, retorna o texto original (ex: "Domingo")
+            }
+        } catch (e: Exception) {
+            value
+        }
     }
 
-    val dia = cleanText(event.Data).takeIf { it.isNotBlank() } ?: cleanText(event.Dia)
-    val titulo = cleanText(event.Titulo).takeIf { it.isNotBlank() } ?: cleanText(event.Evento)
-    val hora = cleanText(event.Horario).takeIf { it.isNotBlank() } ?: cleanText(event.Hora)
-    val local = cleanText(event.Local)
+    val dia = formatToBR(event.Data?.takeIf { it.isNotBlank() } ?: event.Dia)
+    val titulo = event.Titulo?.takeIf { it.isNotBlank() } ?: event.Evento ?: ""
+    val hora = formatToBR(event.Horario?.takeIf { it.isNotBlank() } ?: event.Hora, isTime = true)
+    val local = event.Local?.takeIf { it.lowercase() != "undefined" } ?: ""
 
-    if (titulo.isBlank() && dia.isBlank()) return // Não mostra cards totalmente vazios
+    if (titulo.isBlank() && dia.isBlank()) return
 
     Card(
         modifier = Modifier.fillMaxWidth(),
