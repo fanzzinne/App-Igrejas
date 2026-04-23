@@ -19,15 +19,21 @@ data class ChurchResponse(
     @Json(name = "sermoes") val sermoes: List<SermonResponse> = emptyList(),
     @Json(name = "ministerios") val ministerios: List<MinistryResponse> = emptyList(),
     @Json(name = "mensagemLider") val mensagemLider: List<LeaderMessageResponse> = emptyList(),
-    @Json(name = "config") val config: ConfigResponse? = null
+    // Suporta tanto objeto único quanto lista (padrão planilha)
+    @Json(name = "config") val config: Any? = null,
+    @Json(name = "configuracoes") val configuracoes: Any? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class ConfigResponse(
     val NomeIgreja: String? = null,
+    val Nome: String? = null,
     val LogoUrl: String? = null,
+    val Logo: String? = null,
     val LinkAoVivo: String? = null,
-    val ChavePix: String? = null
+    val AoVivo: String? = null,
+    val ChavePix: String? = null,
+    val Pix: String? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -190,25 +190,47 @@ function showUpdateNotification(worker) {
 }
 
 function setupBranding(data = null) {
-    const appName = data?.config?.NomeIgreja || "App Igrejas";
-    const logoUrl = data?.config?.LogoUrl || "";
+    const defaultName = "Nome da Sua Igreja Aqui";
+    const defaultLogo = "https://i.ibb.co/tMg1KQyD/Logo-dourado.png";
 
-    // Atualiza nomes
+    let config = data?.config || data?.configuracoes;
+
+    if (Array.isArray(config)) {
+        config = config[0];
+    }
+
+    const findKey = (obj, ...keys) => {
+        if (!obj) return null;
+        for (let key of keys) {
+            if (obj[key] && typeof obj[key] === 'string' && obj[key].toLowerCase() !== 'undefined') return obj[key].trim();
+            let lowerKey = key.toLowerCase();
+            if (obj[lowerKey] && typeof obj[lowerKey] === 'string' && obj[lowerKey].toLowerCase() !== 'undefined') return obj[lowerKey].trim();
+            let found = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+            if (found && obj[found] && typeof obj[found] === 'string' && obj[found].toLowerCase() !== 'undefined') return obj[found].trim();
+        }
+        return null;
+    };
+
+    const appName = findKey(config, "NomeIgreja", "Nome", "Igreja") || defaultName;
+    const logoUrl = findKey(config, "LogoUrl", "Logo", "Imagem", "Url") || defaultLogo;
+
     const splashName = document.getElementById('splash-app-name');
-    const headerName = document.getElementById('header-app-name');
     if (splashName) splashName.innerText = appName;
-    if (headerName) headerName.innerText = appName;
+    if (document.title) document.title = appName;
 
-    // Atualiza Logos
     if (logoUrl) {
         const splashLogo = document.getElementById('splash-logo-placeholder');
         const headerLogo = document.getElementById('header-logo-placeholder');
 
         if (splashLogo) {
-            splashLogo.innerHTML = `<img src="${logoUrl}" style="width:100px; height:100px; object-fit:contain; margin-bottom:20px; animation: pulse 2s infinite">`;
+            splashLogo.innerHTML = `<img src="${logoUrl}" style="width:120px; height:120px; object-fit:contain; margin-bottom:20px; animation: pulse 2s infinite">`;
         }
         if (headerLogo) {
-            headerLogo.innerHTML = `<img src="${logoUrl}">`;
+            headerLogo.innerHTML = `<img src="${logoUrl}" alt="Logo" style="height: 100%; width: 100%; object-fit: contain">`;
+            headerLogo.style.height = "110px";
+            headerLogo.style.width = "110px";
+            headerLogo.style.background = "none";
+            headerLogo.style.border = "none";
         }
     }
 }
@@ -591,22 +613,30 @@ const DEVOTIONAL_VERSES = {
     'Triste': [
         { title: "O Consolo que Vem do Alto", ref: "Salmos 34:18", text: "Perto está o Senhor dos que têm o coração quebrantado e salva os de espírito oprimido." },
         { title: "Deus Enxugará suas Lágrimas", ref: "Apocalipse 21:4", text: "Ele enxugará dos seus olhos toda lágrima. Não haverá mais morte, nem tristeza, nem choro, nem dor." },
-        { title: "Refúgio e Fortaleza", ref: "Salmos 46:1", text: "Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade." }
+        { title: "Refúgio e Fortaleza", ref: "Salmos 46:1", text: "Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade." },
+        { title: "Não Temas", ref: "Isaías 41:10", text: "Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus; eu te esforço, e te ajudo, e te sustento com a destra da minha justiça." },
+        { title: "Esperança em Deus", ref: "Salmos 42:11", text: "Por que estás abatida, ó minha alma? Por que te perturbas dentro de mim? Espera em Deus, pois ainda o louvarei." }
     ],
     'Cansado': [
         { title: "Descanso para a Alma", ref: "Mateus 11:28", text: "Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei." },
         { title: "Forças Renovadas", ref: "Isaías 40:31", text: "Mas aqueles que esperam no Senhor renovam as suas forças. Voam alto como águias; correm e não se fatigam." },
-        { title: "Socorro Bem Presente", ref: "Salmos 121:1-2", text: "Elevo os meus olhos para os montes; de onde vem o meu socorro? O meu socorro vem do Senhor, que fez o céu e a terra." }
+        { title: "Socorro Bem Presente", ref: "Salmos 121:1-2", text: "Elevo os meus olhos para os montes; de onde vem o meu socorro? O meu socorro vem do Senhor, que fez o céu e a terra." },
+        { title: "O Senhor é meu Pastor", ref: "Salmos 23:1-3", text: "O Senhor é o meu pastor; nada me faltará. Deitar-me faz em verdes pastos, guia-me mansamente a águas tranquilas. Refrigera a minha alma." },
+        { title: "Paz que Excede Entendimento", ref: "Filipenses 4:7", text: "E a paz de Deus, que excede todo o entendimento, guardará os vossos corações e os vossos sentimentos em Cristo Jesus." }
     ],
     'Grato': [
         { title: "O Sacrifício de Louvor", ref: "1 Tessalonicenses 5:18", text: "Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus para convosco." },
         { title: "A Bondade do Senhor", ref: "Salmos 107:1", text: "Deem graças ao Senhor, porque ele é bom; o seu amor dura para sempre." },
-        { title: "Louvor de Coração", ref: "Salmos 103:1", text: "Bendiga ao Senhor a minha alma! Bendiga ao seu santo nome todo o meu ser!" }
+        { title: "Louvor de Coração", ref: "Salmos 103:1", text: "Bendiga ao Senhor a minha alma! Bendiga ao seu santo nome todo o meu ser!" },
+        { title: "Grandes Coisas fez o Senhor", ref: "Salmos 126:3", text: "Grandes coisas fez o Senhor por nós, pelas quais estamos alegres." },
+        { title: "Cantarei ao Senhor", ref: "Salmos 13:6", text: "Cantarei ao Senhor, porquanto me tem feito muito bem." }
     ],
     'Feliz': [
         { title: "A Alegria do Senhor", ref: "Neemias 8:10", text: "Não vos entristeçais, porque a alegria do Senhor é a vossa força." },
         { title: "Coração Alegre", ref: "Provérbios 15:13", text: "O coração alegre aformoseia o rosto, mas pela dor do coração o espírito se abate." },
-        { title: "Regozijo Constante", ref: "Filipenses 4:4", text: "Alegrem-se sempre no Senhor. Novamente direi: Alegrem-se!" }
+        { title: "Regozijo Constante", ref: "Filipenses 4:4", text: "Alegrem-se sempre no Senhor. Novamente direi: Alegrem-se!" },
+        { title: "Felicidade na Palavra", ref: "Salmos 1:1-2", text: "Bem-aventurado o homem que tem o seu prazer na lei do Senhor, e na sua lei medita de dia e de noite." },
+        { title: "Transbordando de Alegria", ref: "Salmos 16:11", text: "Tu me farás conhecer a vereda da vida, a alegria plena da tua presença." }
     ],
     'default': [
         { title: "O Renovo das Misericórdias", ref: "Lamentações 3:22-23", text: "As misericórdias do Senhor são a causa de não sermos consumidos, porque as suas compaixões não têm fim; renovam-se cada manhã." }

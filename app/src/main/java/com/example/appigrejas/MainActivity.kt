@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.example.appigrejas.data.remote.BannerResponse
+import com.example.appigrejas.data.remote.ConfigResponse
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -83,6 +85,52 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val uiState by homeViewModel.uiState.collectAsState()
+    val localContext = LocalContext.current
+    
+    val defaultLogo = "https://i.ibb.co/tMg1KQyD/Logo-dourado.png"
+    val defaultName = "Nome da Sua Igreja Aqui"
+
+    // Função para extrair as configurações independente se vier como objeto ou lista
+    val churchConfig = remember(uiState) {
+        fun Map<*, *>.findKey(vararg keys: String): String? {
+            for (key in keys) {
+                // Tenta a chave exata
+                val value = this[key] as? String
+                if (!value.isNullOrBlank() && value.lowercase() != "undefined") return value.trim()
+                
+                // Tenta a chave em minúsculo
+                val lowerValue = this[key.lowercase()] as? String
+                if (!lowerValue.isNullOrBlank() && lowerValue.lowercase() != "undefined") return lowerValue.trim()
+
+                // Procura por qualquer chave que contenha o nome ignorando caso
+                val foundKey = this.keys.find { it.toString().equals(key, ignoreCase = true) }
+                if (foundKey != null) {
+                    val anyValue = this[foundKey] as? String
+                    if (!anyValue.isNullOrBlank() && anyValue.lowercase() != "undefined") return anyValue.trim()
+                }
+            }
+            return null
+        }
+
+        val configData = uiState?.config ?: uiState?.configuracoes
+        val map = when (configData) {
+            is Map<*, *> -> configData
+            is List<*> -> configData.firstOrNull() as? Map<*, *>
+            else -> null
+        }
+
+        if (map != null) {
+            ConfigResponse(
+                NomeIgreja = map.findKey("NomeIgreja", "Nome", "Igreja"),
+                LogoUrl = map.findKey("LogoUrl", "Logo", "Imagem", "Url"),
+                LinkAoVivo = map.findKey("LinkAoVivo", "AoVivo", "Live", "Video"),
+                ChavePix = map.findKey("ChavePix", "Pix", "Chave")
+            )
+        } else {
+            ConfigResponse(NomeIgreja = defaultName, LogoUrl = defaultLogo)
+        }
+    }
+
     val items = listOf(
         Screen.Home,
         Screen.Media,
@@ -103,24 +151,16 @@ fun MainScreen(
                 containerColor = Color.Black,
                 contentColor = Gold,
                 header = {
-                    Surface(
-                        modifier = Modifier.size(48.dp).padding(8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = Gold.copy(alpha = 0.1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
+                    Box(
+                        modifier = Modifier.size(100.dp).padding(8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (uiState?.config?.LogoUrl != null) {
-                            AsyncImage(
-                                model = uiState?.config?.LogoUrl,
-                                contentDescription = null,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.padding(4.dp)
-                            )
-                        } else {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
-                            }
-                        }
+                        AsyncImage(
+                            model = churchConfig.LogoUrl ?: defaultLogo,
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             ) {
@@ -156,41 +196,53 @@ fun MainScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start, // Mantém à esquerda como solicitado implicitamente
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             if (!(isMedium || isExpanded)) {
-                                Surface(
-                                    modifier = Modifier.size(32.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Gold.copy(alpha = 0.1f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
+                                Box(
+                                    modifier = Modifier.size(110.dp).padding(4.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    if (uiState?.config?.LogoUrl != null) {
-                                        AsyncImage(
-                                            model = uiState?.config?.LogoUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.padding(4.dp)
-                                        )
-                                    } else {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
-                                        }
-                                    }
+                                    AsyncImage(
+                                        model = churchConfig.LogoUrl ?: defaultLogo,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
                             }
-                            Text(
-                                text = uiState?.config?.NomeIgreja ?: "App Igrejas",
-                                color = Gold,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
-                            )
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* Notificações */ }) {
-                            Icon(Icons.Default.Notifications, contentDescription = null, tint = Gold)
+                        Button(
+                            onClick = {
+                                val liveUrl = churchConfig.LinkAoVivo ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(liveUrl))
+                                localContext.startActivity(intent)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF0000)),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.padding(end = 4.dp).height(28.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp).background(Color.White.copy(alpha = 0.2f), CircleShape).padding(2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "AO VIVO",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
@@ -245,8 +297,8 @@ fun MainScreen(
                                     navController.navigate(Screen.Community.route)
                                 }
                                 "Contribuição" -> navController.navigate(Screen.Giving.route)
-                                "Ao Vivo" -> {
-                                    // Handled in QuickActionsGrid
+                                "Mural" -> {
+                                    navController.navigate(Screen.Community.route + "?tab=1")
                                 }
                                 "Agenda Semanal" -> navController.navigate(Screen.Community.route)
                             }
@@ -261,7 +313,16 @@ fun MainScreen(
                 }
                 composable(Screen.Media.route) { SermonLibraryScreen(windowSizeClass) }
                 composable(Screen.Bible.route) { BibleTabScreen(windowSizeClass) }
-                composable(Screen.Community.route) { CommunityScreen(windowSizeClass) }
+                composable(
+                    route = Screen.Community.route + "?tab={tab}",
+                    arguments = listOf(navArgument("tab") { 
+                        type = NavType.IntType
+                        defaultValue = 0 
+                    })
+                ) { backStackEntry ->
+                    val tabIndex = backStackEntry.arguments?.getInt("tab") ?: 0
+                    CommunityScreen(windowSizeClass, tabIndex = tabIndex)
+                }
                 composable(
                     route = Screen.Devotional.route + "?mood={mood}",
                     arguments = listOf(navArgument("mood") { 
@@ -337,7 +398,12 @@ fun HomeScreen(
         item {
             QuickActionsGrid(isExpanded, onActionClick = { action ->
                 if (action == "Ao Vivo") {
-                    val liveUrl = uiState?.config?.LinkAoVivo ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
+                    val configData = uiState?.config ?: uiState?.configuracoes
+                    val liveUrl = when(configData) {
+                        is Map<*, *> -> configData["LinkAoVivo"] as? String ?: configData["AoVivo"] as? String
+                        is List<*> -> (configData.firstOrNull() as? Map<*, *>)?.get("LinkAoVivo") as? String ?: (configData.firstOrNull() as? Map<*, *>)?.get("AoVivo") as? String
+                        else -> null
+                    } ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(liveUrl))
                     localContext.startActivity(intent)
                 } else {
@@ -450,7 +516,7 @@ fun BannerCarousel(banners: List<BannerResponse>, isExpanded: Boolean = false) {
 @Composable
 fun QuickActionsGrid(isExpanded: Boolean = false, onActionClick: (String) -> Unit) {
     val actions = listOf(
-        QuickAction("Ao Vivo", Icons.Default.LiveTv),
+        QuickAction("Mural", Icons.Default.Campaign),
         QuickAction("Oração", Icons.Default.VolunteerActivism),
         QuickAction("Contribuição", Icons.Default.Paid),
         QuickAction("Agenda Semanal", Icons.Default.CalendarMonth)

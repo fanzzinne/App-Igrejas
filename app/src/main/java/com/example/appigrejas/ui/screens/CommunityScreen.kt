@@ -46,9 +46,10 @@ import java.util.*
 @Composable
 fun CommunityScreen(
     windowSizeClass: WindowSizeClass,
+    tabIndex: Int = 0,
     viewModel: CommunityViewModel = viewModel()
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(tabIndex) }
     val tabs = listOf("Ministérios", "Liderança", "Agenda Semanal", "Pedidos de Oração")
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 

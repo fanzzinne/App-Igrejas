@@ -28,22 +28,30 @@ val DEVOTIONAL_VERSES = mapOf(
     "Triste" to listOf(
         MoodVerse("O Consolo que Vem do Alto", "Perto está o Senhor dos que têm o coração quebrantado e salva os de espírito oprimido.", "Salmos 34:18"),
         MoodVerse("Deus Enxugará suas Lágrimas", "Ele enxugará dos seus olhos toda lágrima. Não haverá mais morte, nem tristeza, nem choro, nem dor.", "Apocalipse 21:4"),
-        MoodVerse("Refúgio e Fortaleza", "Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade.", "Salmos 46:1")
+        MoodVerse("Refúgio e Fortaleza", "Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade.", "Salmos 46:1"),
+        MoodVerse("Não Temas", "Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus; eu te esforço, e te ajudo, e te sustento com a destra da minha justiça.", "Isaías 41:10"),
+        MoodVerse("Esperança em Deus", "Por que estás abatida, ó minha alma? Por que te perturbas dentro de mim? Espera em Deus, pois ainda o louvarei.", "Salmos 42:11")
     ),
     "Cansado" to listOf(
         MoodVerse("Descanso para a Alma", "Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei.", "Mateus 11:28"),
         MoodVerse("Forças Renovadas", "Mas aqueles que esperam no Senhor renovam as suas forças. Voam alto como águias; correm e não se fatigam.", "Isaías 40:31"),
-        MoodVerse("Socorro Bem Presente", "Elevo os meus olhos para os montes; de onde vem o meu socorro? O meu socorro vem do Senhor, que fez o céu e a terra.", "Salmos 121:1-2")
+        MoodVerse("Socorro Bem Presente", "Elevo os meus olhos para os montes; de onde vem o meu socorro? O meu socorro vem do Senhor, que fez o céu e a terra.", "Salmos 121:1-2"),
+        MoodVerse("O Senhor é meu Pastor", "O Senhor é o meu pastor; nada me faltará. Deitar-me faz em verdes pastos, guia-me mansamente a águas tranquilas. Refrigera a minha alma.", "Salmos 23:1-3"),
+        MoodVerse("Paz que Excede Entendimento", "E a paz de Deus, que excede todo o entendimento, guardará os vossos corações e os vossos sentimentos em Cristo Jesus.", "Filipenses 4:7")
     ),
     "Grato" to listOf(
         MoodVerse("O Sacrifício de Louvor", "Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus para convosco.", "1 Tessalonicenses 5:18"),
         MoodVerse("A Bondade do Senhor", "Deem graças ao Senhor, porque ele é bom; o seu amor dura para sempre.", "Salmos 107:1"),
-        MoodVerse("Louvor de Coração", "Bendiga ao Senhor a minha alma! Bendiga ao seu santo nome todo o meu ser!", "Salmos 103:1")
+        MoodVerse("Louvor de Coração", "Bendiga ao Senhor a minha alma! Bendiga ao seu santo nome todo o meu ser!", "Salmos 103:1"),
+        MoodVerse("Grandes Coisas fez o Senhor", "Grandes coisas fez o Senhor por nós, pelas quais estamos alegres.", "Salmos 126:3"),
+        MoodVerse("Cantarei ao Senhor", "Cantarei ao Senhor, porquanto me tem feito muito bem.", "Salmos 13:6")
     ),
     "Feliz" to listOf(
         MoodVerse("A Alegria do Senhor", "Não vos entristeçais, porque a alegria do Senhor é a vossa força.", "Neemias 8:10"),
         MoodVerse("Coração Alegre", "O coração alegre aformoseia o rosto, mas pela dor do coração o espírito se abate.", "Provérbios 15:13"),
-        MoodVerse("Regozijo Constante", "Alegrem-se sempre no Senhor. Novamente direi: Alegrem-se!", "Filipenses 4:4")
+        MoodVerse("Regozijo Constante", "Alegrem-se sempre no Senhor. Novamente direi: Alegrem-se!", "Filipenses 4:4"),
+        MoodVerse("Felicidade na Palavra", "Bem-aventurado o homem que tem o seu prazer na lei do Senhor, e na sua lei medita de dia e de noite.", "Salmos 1:1-2"),
+        MoodVerse("Transbordando de Alegria", "Tu me farás conhecer a vereda da vida, a alegria plena da tua presença.", "Salmos 16:11")
     )
 )
 
