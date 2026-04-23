@@ -1,14 +1,20 @@
 package com.example.appigrejas.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,37 +32,41 @@ import coil.compose.AsyncImage
 import com.example.appigrejas.data.model.Sermon
 import com.example.appigrejas.ui.components.AppFooter
 import com.example.appigrejas.ui.theme.Gold
-import com.example.appigrejas.viewmodel.SermonViewModel
 import com.example.appigrejas.util.VideoUtils
-import android.content.Intent
-import android.net.Uri
+import com.example.appigrejas.viewmodel.SermonViewModel
 
 @Composable
-fun SermonLibraryScreen(viewModel: SermonViewModel = viewModel()) {
+fun SermonLibraryScreen(
+    windowSizeClass: WindowSizeClass,
+    viewModel: SermonViewModel = viewModel()
+) {
     val sermons by viewModel.sermons.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(if (isExpanded) 3 else 1),
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
                 text = "Biblioteca de Sermões",
                 color = Gold,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             )
         }
 
         if (isLoading) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(
-                    modifier = Modifier
-                        .fillParentMaxSize(),
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = Gold)
@@ -64,11 +74,9 @@ fun SermonLibraryScreen(viewModel: SermonViewModel = viewModel()) {
             }
         } else {
             items(sermons) { sermon ->
-                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    SermonItem(sermon)
-                }
+                SermonItem(sermon)
             }
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 AppFooter()
             }
         }

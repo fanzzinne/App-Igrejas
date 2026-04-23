@@ -33,6 +33,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -47,12 +51,14 @@ import com.example.appigrejas.ui.theme.Gold
 import com.example.appigrejas.viewmodel.HomeViewModel
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
             AppIgrejasTheme {
-                MainScreen()
+                MainScreen(windowSizeClass = windowSizeClass)
             }
         }
     }
@@ -69,7 +75,10 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(homeViewModel: HomeViewModel = viewModel()) {
+fun MainScreen(
+    windowSizeClass: WindowSizeClass,
+    homeViewModel: HomeViewModel = viewModel()
+) {
     val navController = rememberNavController()
     val uiState by homeViewModel.uiState.collectAsState()
     val items = listOf(
@@ -79,57 +88,43 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel()) {
         Screen.Community
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Gold.copy(alpha = 0.1f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
-                        ) {
-                            if (uiState?.config?.LogoUrl != null) {
-                                AsyncImage(
-                                    model = uiState?.config?.LogoUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                            } else {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
-                                }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+    val isMedium = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Medium
+
+    Row(modifier = Modifier.fillMaxSize()) {
+        // Navigation Rail for Medium and Expanded (Tablet/Desktop)
+        if (isMedium || isExpanded) {
+            NavigationRail(
+                containerColor = Color.Black,
+                contentColor = Gold,
+                header = {
+                    Surface(
+                        modifier = Modifier.size(48.dp).padding(8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Gold.copy(alpha = 0.1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
+                    ) {
+                        if (uiState?.config?.LogoUrl != null) {
+                            AsyncImage(
+                                model = uiState?.config?.LogoUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
                             }
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = uiState?.config?.NomeIgreja ?: "App Igrejas",
-                            color = Gold,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
                     }
-                },
-                actions = {
-                    IconButton(onClick = { /* Notificações */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Gold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.Black,
-                contentColor = Gold
+                }
             ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+                Spacer(modifier = Modifier.weight(1f))
                 items.forEach { screen ->
-                    NavigationBarItem(
+                    NavigationRailItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
                         label = { Text(screen.title) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
@@ -142,7 +137,7 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel()) {
                                 restoreState = true
                             }
                         },
-                        colors = NavigationBarItemDefaults.colors(
+                        colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = Color.Black,
                             selectedTextColor = Gold,
                             indicatorColor = Gold,
@@ -151,46 +146,126 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel()) {
                         )
                     )
                 }
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) { 
-                HomeScreen(
-                    viewModel = homeViewModel,
-                    onActionClick = { action ->
-                        when (action) {
-                            "Bíblia" -> navController.navigate(Screen.Bible.route)
-                            "Oração" -> {
-                                navController.navigate(Screen.Community.route)
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (!(isMedium || isExpanded)) {
+                                Surface(
+                                    modifier = Modifier.size(32.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Gold.copy(alpha = 0.1f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Gold)
+                                ) {
+                                    if (uiState?.config?.LogoUrl != null) {
+                                        AsyncImage(
+                                            model = uiState?.config?.LogoUrl,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.padding(4.dp)
+                                        )
+                                    } else {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.Church, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
                             }
-                            "Contribuição" -> navController.navigate(Screen.Giving.route)
-                            "Ao Vivo" -> {
-                                // Handled in QuickActionsGrid
-                            }
-                            "Eventos" -> navController.navigate(Screen.Community.route)
+                            Text(
+                                text = uiState?.config?.NomeIgreja ?: "App Igrejas",
+                                color = Gold,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
                         }
                     },
-                    onDevotionalClick = {
-                        navController.navigate(Screen.Devotional.route)
+                    actions = {
+                        IconButton(onClick = { /* Notificações */ }) {
+                            Icon(Icons.Default.Notifications, contentDescription = null, tint = Gold)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+                )
+            },
+            bottomBar = {
+                if (!(isMedium || isExpanded)) {
+                    NavigationBar(
+                        containerColor = Color.Black,
+                        contentColor = Gold
+                    ) {
+                        items.forEach { screen ->
+                            NavigationBarItem(
+                                icon = { Icon(screen.icon, contentDescription = null) },
+                                label = { Text(screen.title) },
+                                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.Black,
+                                    selectedTextColor = Gold,
+                                    indicatorColor = Gold,
+                                    unselectedIconColor = Gold.copy(alpha = 0.6f),
+                                    unselectedTextColor = Gold.copy(alpha = 0.6f)
+                                )
+                            )
+                        }
                     }
-                ) 
+                }
             }
-            composable(Screen.Media.route) { SermonLibraryScreen() }
-            composable(Screen.Bible.route) { BibleTabScreen() }
-            composable(Screen.Community.route) { CommunityScreen() }
-            composable(Screen.Devotional.route) { DevotionalScreen() }
-            composable(Screen.Giving.route) { DigitalGivingScreen(homeViewModel) }
+        ) { innerPadding ->
+            NavHost(
+                navController,
+                startDestination = Screen.Home.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Home.route) {
+                    HomeScreen(
+                        windowSizeClass = windowSizeClass,
+                        viewModel = homeViewModel,
+                        onActionClick = { action ->
+                            when (action) {
+                                "Bíblia" -> navController.navigate(Screen.Bible.route)
+                                "Oração" -> {
+                                    navController.navigate(Screen.Community.route)
+                                }
+                                "Contribuição" -> navController.navigate(Screen.Giving.route)
+                                "Ao Vivo" -> {
+                                    // Handled in QuickActionsGrid
+                                }
+                                "Eventos" -> navController.navigate(Screen.Community.route)
+                            }
+                        },
+                        onDevotionalClick = {
+                            navController.navigate(Screen.Devotional.route)
+                        }
+                    )
+                }
+                composable(Screen.Media.route) { SermonLibraryScreen(windowSizeClass) }
+                composable(Screen.Bible.route) { BibleTabScreen(windowSizeClass) }
+                composable(Screen.Community.route) { CommunityScreen(windowSizeClass) }
+                composable(Screen.Devotional.route) { DevotionalScreen(windowSizeClass) }
+                composable(Screen.Giving.route) { DigitalGivingScreen(windowSizeClass, homeViewModel) }
+            }
         }
     }
 }
 
 @Composable
-fun BibleTabScreen() {
+fun BibleTabScreen(windowSizeClass: WindowSizeClass) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Bíblia", "Devocional")
 
@@ -215,20 +290,22 @@ fun BibleTabScreen() {
             }
         }
         when (selectedTabIndex) {
-            0 -> BibleScreen()
-            1 -> DevotionalScreen()
+            0 -> BibleScreen(windowSizeClass)
+            1 -> DevotionalScreen(windowSizeClass)
         }
     }
 }
 
 @Composable
 fun HomeScreen(
+    windowSizeClass: WindowSizeClass,
     viewModel: HomeViewModel = viewModel(),
     onActionClick: (String) -> Unit = {},
     onDevotionalClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val localContext = LocalContext.current
+    val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     LazyColumn(
         modifier = Modifier
@@ -238,12 +315,12 @@ fun HomeScreen(
     ) {
         // Banner Carousel
         item {
-            BannerCarousel(uiState?.banners ?: emptyList())
+            BannerCarousel(uiState?.banners ?: emptyList(), isExpanded)
         }
 
         // Quick Actions
         item {
-            QuickActionsGrid(onActionClick = { action ->
+            QuickActionsGrid(isExpanded, onActionClick = { action ->
                 if (action == "Ao Vivo") {
                     val liveUrl = uiState?.config?.LinkAoVivo ?: "https://www.youtube.com/results?search_query=igreja+ao+vivo"
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(liveUrl))
@@ -301,11 +378,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun BannerCarousel(banners: List<BannerResponse>) {
+fun BannerCarousel(banners: List<BannerResponse>, isExpanded: Boolean = false) {
+    val height = if (isExpanded) 400.dp else 200.dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(height)
             .padding(16.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color.DarkGray)
@@ -358,7 +436,7 @@ fun BannerCarousel(banners: List<BannerResponse>) {
 }
 
 @Composable
-fun QuickActionsGrid(onActionClick: (String) -> Unit) {
+fun QuickActionsGrid(isExpanded: Boolean = false, onActionClick: (String) -> Unit) {
     val actions = listOf(
         QuickAction("Ao Vivo", Icons.Default.LiveTv),
         QuickAction("Oração", Icons.Default.VolunteerActivism),
@@ -366,13 +444,17 @@ fun QuickActionsGrid(onActionClick: (String) -> Unit) {
         QuickAction("Eventos", Icons.Default.CalendarMonth)
     )
 
+    val arrangement = if (isExpanded) Arrangement.Center else Arrangement.SpaceEvenly
+    val spacing = if (isExpanded) 48.dp else 16.dp
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = arrangement
     ) {
         actions.forEach { action ->
+            if (isExpanded) Spacer(modifier = Modifier.width(spacing))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -518,10 +600,20 @@ fun PlaceholderScreen(name: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
-fun MainScreenPreview() {
+fun MainScreenMobilePreview() {
     AppIgrejasTheme {
-        MainScreen()
+        MainScreen(windowSizeClass = WindowSizeClass.calculateFromSize(androidx.compose.ui.unit.DpSize(411.dp, 891.dp)))
+    }
+}
+
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,dpi=240")
+@Composable
+fun MainScreenTabletPreview() {
+    AppIgrejasTheme {
+        MainScreen(windowSizeClass = WindowSizeClass.calculateFromSize(androidx.compose.ui.unit.DpSize(1280.dp, 800.dp)))
     }
 }

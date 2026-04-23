@@ -1,7 +1,5 @@
 package com.example.appigrejas.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -10,11 +8,17 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,20 +31,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import kotlinx.coroutines.launch
-import com.example.appigrejas.util.VideoUtils
 import coil.compose.AsyncImage
 import com.example.appigrejas.data.model.LeaderMessage
 import com.example.appigrejas.data.model.Ministry
 import com.example.appigrejas.ui.components.AppFooter
 import com.example.appigrejas.ui.theme.Gold
+import com.example.appigrejas.util.VideoUtils
 import com.example.appigrejas.viewmodel.CommunityViewModel
+import kotlinx.coroutines.launch
 
 @Composable
-fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
+fun CommunityScreen(
+    windowSizeClass: WindowSizeClass,
+    viewModel: CommunityViewModel = viewModel()
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Ministérios", "Liderança", "Pedidos de Oração")
+    val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         ScrollableTabRow(
@@ -67,29 +74,29 @@ fun CommunityScreen(viewModel: CommunityViewModel = viewModel()) {
 
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
-                0 -> MinistryList(viewModel)
-                1 -> LeaderMessagesList(viewModel)
-                2 -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item { PrayerRequestForm(viewModel) }
-                    item { AppFooter() }
-                }
+                0 -> MinistryList(viewModel, isExpanded)
+                1 -> LeaderMessagesList(viewModel, isExpanded)
+                2 -> PrayerRequestScreen(viewModel, isExpanded)
             }
         }
     }
 }
 
 @Composable
-fun MinistryList(viewModel: CommunityViewModel) {
+fun MinistryList(viewModel: CommunityViewModel, isExpanded: Boolean) {
     val ministries by viewModel.ministries.collectAsState()
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(if (isExpanded) 3 else 1),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
     ) {
         items(ministries) { ministry ->
             MinistryCard(ministry)
         }
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             AppFooter()
         }
     }
@@ -121,17 +128,20 @@ fun MinistryCard(ministry: Ministry) {
 }
 
 @Composable
-fun LeaderMessagesList(viewModel: CommunityViewModel) {
+fun LeaderMessagesList(viewModel: CommunityViewModel, isExpanded: Boolean) {
     val messages by viewModel.messages.collectAsState()
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(if (isExpanded) 2 else 1),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
     ) {
         items(messages) { message ->
             LeaderMessageCard(message)
         }
-        item {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             AppFooter()
         }
     }
@@ -200,6 +210,25 @@ fun VideoPlayer(url: String, modifier: Modifier = Modifier) {
         },
         modifier = modifier.clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
     )
+}
+
+@Composable
+fun PrayerRequestScreen(viewModel: CommunityViewModel, isExpanded: Boolean) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = if (isExpanded) Alignment.CenterHorizontally else Alignment.Start
+    ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(if (isExpanded) 0.6f else 1f)
+                    .padding(horizontal = if (isExpanded) 0.dp else 0.dp)
+            ) {
+                PrayerRequestForm(viewModel)
+            }
+        }
+        item { AppFooter() }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -300,7 +329,7 @@ fun PrayerRequestForm(viewModel: CommunityViewModel) {
                     coroutineScope.launch {
                         val success = viewModel.submitPrayerRequest(
                             name = name,
-                            phone = "", // Could add a field for this
+                            phone = "",
                             category = category,
                             message = message
                         )

@@ -556,9 +556,26 @@ function loadDevotional(mood = null) {
             <h2 style="color:var(--gold); margin-top:5px">${title}</h2>
             <p style="color:var(--light-grey); margin-bottom:20px">${reference}</p>
             <p style="line-height:1.6">${text}</p>
-            <button class="btn-outline" style="margin-top:30px">Compartilhar</button>
+            <button class="btn-outline" style="margin-top:30px" onclick="shareDevotional('${title.replace(/'/g, "\\'")}', '${reference}', '${text.replace(/'/g, "\\'")}')">
+                Compartilhar
+            </button>
         </div>
     `;
+}
+
+function shareDevotional(title, reference, text) {
+    const shareText = `${title}\n\n"${text}"\n\n${reference}`;
+
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            text: shareText
+        }).catch(err => console.log('Erro ao compartilhar:', err));
+    } else {
+        navigator.clipboard.writeText(shareText).then(() => {
+            alert("Devocional copiado para a área de transferência!");
+        });
+    }
 }
 
 function openGivingModal() {
