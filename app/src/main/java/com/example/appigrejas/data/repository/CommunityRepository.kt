@@ -2,6 +2,7 @@ package com.example.appigrejas.data.repository
 
 import com.example.appigrejas.data.model.LeaderMessage
 import com.example.appigrejas.data.model.Ministry
+import com.example.appigrejas.data.remote.EventResponse
 import com.example.appigrejas.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -9,6 +10,35 @@ import android.util.Log
 
 class CommunityRepository {
     private val apiService = RetrofitClient.apiService
+
+    fun getEvents(): Flow<List<EventResponse>> = flow {
+        try {
+            val response = apiService.getAllContent()
+            val eventsList = if (response.eventos.isNotEmpty()) {
+                response.eventos
+            } else if (response.agenda.isNotEmpty()) {
+                response.agenda
+            } else {
+                emptyList()
+            }
+
+            if (eventsList.isNotEmpty()) {
+                emit(eventsList)
+            } else {
+                emit(getMockEvents())
+            }
+        } catch (e: Exception) {
+            Log.e("CommunityRepository", "Error fetching events", e)
+            emit(getMockEvents())
+        }
+    }
+
+    private fun getMockEvents() = listOf(
+        EventResponse(Titulo = "Culto da Família", Data = "Domingo", Horario = "19:00", Local = "Sede"),
+        EventResponse(Titulo = "Escola Bíblica", Data = "Domingo", Horario = "09:00", Local = "Sede"),
+        EventResponse(Titulo = "Células", Data = "Quarta-feira", Horario = "20:00", Local = "Casas"),
+        EventResponse(Titulo = "Culto de Jovens", Data = "Sábado", Horario = "19:30", Local = "Anexo")
+    )
 
     fun getMinistries(): Flow<List<Ministry>> = flow {
         try {

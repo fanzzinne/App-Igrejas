@@ -23,7 +23,12 @@ const MOCK_DATA = {
         { Nome: "Pr. Presidente", Cargo: "Pastor Sênior", Mensagem: "A Importância da Fé e da Perseverança", VideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", FotoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200" },
         { Nome: "Pra. Auxiliar", Cargo: "Pastora de Famílias", Mensagem: "Família sob a Graça: O Fundamento do Lar", VideoUrl: "https://drive.google.com/file/d/1_PLACEHOLDER_ID/view?usp=sharing", FotoUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200" }
     ],
-    eventos: []
+    eventos: [
+        { Titulo: "Culto da Família", Data: "Domingo", Horario: "19:00", Local: "Sede" },
+        { Titulo: "Escola Bíblica", Data: "Domingo", Horario: "09:00", Local: "Sede" },
+        { Titulo: "Células", Data: "Quarta-feira", Horario: "20:00", Local: "Casas" },
+        { Titulo: "Culto de Jovens", Data: "Sábado", Horario: "19:30", Local: "Anexo" }
+    ]
 };
 
 let currentGivingType = 'dizimo';
@@ -342,22 +347,39 @@ function showCommunitySection(section, btn) {
             </div>
         `;
     } else if (section === 'events') {
-        const list = window.appData?.eventos && window.appData.eventos.length > 0
+        const list = (window.appData?.eventos && window.appData.eventos.length > 0)
                     ? window.appData.eventos
-                    : (window.appData?.noticias || MOCK_DATA.noticias);
+                    : (window.appData?.agenda || MOCK_DATA.eventos);
 
-        content.innerHTML = `<div class="section-container" style="padding-top:20px">` + list.map(ev => `
-            <div class="devotional-card" style="margin-bottom:12px; border-left: 4px solid var(--gold)">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
-                    <div>
-                        <small class="gold-text" style="font-weight:bold">${formatDateBR(ev.Data)}</small>
-                        <h4 style="margin:5px 0">${ev.Titulo}</h4>
-                        <p style="color:#aaa; font-size:13px">${ev.Descricao || ''}</p>
-                    </div>
-                    <i class="fas fa-calendar-check" style="color:var(--gold); opacity:0.5"></i>
-                </div>
+        content.innerHTML = `
+            <div class="section-container" style="padding-top:20px">
+                <h4 style="color:var(--gold); margin-bottom:20px; text-align:center">Agenda Semanal</h4>
+                ${list.map(ev => {
+                    const dia = ev.Data || ev.Dia || "";
+                    const titulo = ev.Titulo || ev.Evento || "";
+                    const hora = ev.Horario || ev.Hora || "";
+                    const local = ev.Local || "";
+
+                    return `
+                        <div class="devotional-card" style="margin-bottom:16px; border-left: 4px solid var(--gold); padding: 16px; display: flex; align-items: center; gap: 15px">
+                            <div style="background: rgba(255, 215, 0, 0.1); width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center">
+                                <i class="fas fa-calendar-day" style="color:var(--gold); font-size: 20px"></i>
+                            </div>
+                            <div style="flex: 1">
+                                <h4 style="margin: 0; color: var(--gold); font-size: 16px; font-weight: 700">${titulo}</h4>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap">
+                                    <span style="color: #fff; font-size: 13px; font-weight: 500">${dia}</span>
+                                    ${dia && (hora || local) ? `<span style="color: var(--gold); opacity: 0.5">•</span>` : ''}
+                                    <span style="color: #fff; font-size: 13px">${hora}</span>
+                                    ${hora && local ? `<span style="color: var(--gold); opacity: 0.5">•</span>` : ''}
+                                    <span style="color: #ccc; font-size: 13px">${local}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
-        `).join('') + `</div>`;
+        `;
 
         if (!btn) {
             const tabs = document.querySelectorAll('#community .tab-btn');

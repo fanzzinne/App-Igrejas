@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.appigrejas.data.model.LeaderMessage
 import com.example.appigrejas.data.model.Ministry
+import com.example.appigrejas.data.remote.EventResponse
 import com.example.appigrejas.ui.components.AppFooter
 import com.example.appigrejas.ui.theme.Gold
 import com.example.appigrejas.util.VideoUtils
@@ -46,7 +47,7 @@ fun CommunityScreen(
     viewModel: CommunityViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Ministérios", "Liderança", "Pedidos de Oração")
+    val tabs = listOf("Ministérios", "Liderança", "Agenda Semanal", "Pedidos de Oração")
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -76,7 +77,78 @@ fun CommunityScreen(
             when (selectedTab) {
                 0 -> MinistryList(viewModel, isExpanded)
                 1 -> LeaderMessagesList(viewModel, isExpanded)
-                2 -> PrayerRequestScreen(viewModel, isExpanded)
+                2 -> WeeklyAgendaList(viewModel, isExpanded)
+                3 -> PrayerRequestScreen(viewModel, isExpanded)
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyAgendaList(viewModel: CommunityViewModel, isExpanded: Boolean) {
+    val events by viewModel.events.collectAsState()
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(if (isExpanded) 2 else 1),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(events) { event ->
+            AgendaCard(event)
+        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            AppFooter()
+        }
+    }
+}
+
+@Composable
+fun AgendaCard(event: EventResponse) {
+    val dia = event.Data?.takeIf { it.isNotBlank() } ?: event.Dia ?: ""
+    val titulo = event.Titulo?.takeIf { it.isNotBlank() } ?: event.Evento ?: ""
+    val hora = event.Horario?.takeIf { it.isNotBlank() } ?: event.Hora ?: ""
+    val local = event.Local ?: ""
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Gold.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Event, contentDescription = null, tint = Gold, modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = titulo,
+                    color = Gold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = dia, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    if (dia.isNotBlank() && (hora.isNotBlank() || local.isNotBlank())) {
+                        Text(text = "  •  ", color = Gold, fontSize = 14.sp)
+                    }
+                    Text(text = hora, color = Color.White, fontSize = 14.sp)
+                    if (hora.isNotBlank() && local.isNotBlank()) {
+                        Text(text = "  •  ", color = Gold, fontSize = 14.sp)
+                    }
+                    Text(text = local, color = Color.LightGray, fontSize = 14.sp)
+                }
             }
         }
     }

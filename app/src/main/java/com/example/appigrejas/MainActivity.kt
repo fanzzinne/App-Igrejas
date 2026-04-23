@@ -246,7 +246,7 @@ fun MainScreen(
                                 "Ao Vivo" -> {
                                     // Handled in QuickActionsGrid
                                 }
-                                "Eventos" -> navController.navigate(Screen.Community.route)
+                                "Agenda Semanal" -> navController.navigate(Screen.Community.route)
                             }
                         },
                         onDevotionalClick = {
@@ -341,7 +341,7 @@ fun HomeScreen(
 
         // News/Events Horizontal Grid
         item {
-            SectionTitle("Notícias e Eventos")
+            SectionTitle("Notícias e Agenda")
             NewsHorizontalGrid()
         }
 
@@ -441,7 +441,7 @@ fun QuickActionsGrid(isExpanded: Boolean = false, onActionClick: (String) -> Uni
         QuickAction("Ao Vivo", Icons.Default.LiveTv),
         QuickAction("Oração", Icons.Default.VolunteerActivism),
         QuickAction("Contribuição", Icons.Default.Paid),
-        QuickAction("Eventos", Icons.Default.CalendarMonth)
+        QuickAction("Agenda Semanal", Icons.Default.CalendarMonth)
     )
 
     val arrangement = if (isExpanded) Arrangement.Center else Arrangement.SpaceEvenly

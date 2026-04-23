@@ -15,6 +15,7 @@ data class ChurchResponse(
     @Json(name = "banners") val banners: List<BannerResponse> = emptyList(),
     @Json(name = "noticias") val noticias: List<NewsResponse> = emptyList(),
     @Json(name = "eventos") val eventos: List<EventResponse> = emptyList(),
+    @Json(name = "agenda") val agenda: List<EventResponse> = emptyList(),
     @Json(name = "sermoes") val sermoes: List<SermonResponse> = emptyList(),
     @Json(name = "ministerios") val ministerios: List<MinistryResponse> = emptyList(),
     @Json(name = "mensagemLider") val mensagemLider: List<LeaderMessageResponse> = emptyList(),
@@ -36,7 +37,17 @@ data class BannerResponse(val Titulo: String, val ImagemUrl: String, val Link: S
 data class NewsResponse(val Titulo: String, val Descricao: String, val ImagemUrl: String, val Data: String)
 
 @JsonClass(generateAdapter = true)
-data class EventResponse(val Titulo: String, val Data: String, val Horario: String, val Local: String)
+data class EventResponse(
+    val Titulo: String? = "",
+    val Data: String? = "",
+    val Horario: String? = "",
+    val Local: String? = "",
+    val Descricao: String? = "",
+    // Campos alternativos comuns em planilhas
+    val Evento: String? = "",
+    val Dia: String? = "",
+    val Hora: String? = ""
+)
 
 @JsonClass(generateAdapter = true)
 data class SermonResponse(val Titulo: String, val Pregador: String, val VideoUrl: String, val Data: String)

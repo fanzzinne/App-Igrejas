@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appigrejas.data.model.LeaderMessage
 import com.example.appigrejas.data.model.Ministry
+import com.example.appigrejas.data.remote.EventResponse
 import com.example.appigrejas.data.repository.CommunityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,9 @@ class CommunityViewModel(private val repository: CommunityRepository = Community
     private val _messages = MutableStateFlow<List<LeaderMessage>>(emptyList())
     val messages: StateFlow<List<LeaderMessage>> = _messages
 
+    private val _events = MutableStateFlow<List<EventResponse>>(emptyList())
+    val events: StateFlow<List<EventResponse>> = _events
+
     init {
         loadCommunityData()
     }
@@ -24,6 +28,7 @@ class CommunityViewModel(private val repository: CommunityRepository = Community
         viewModelScope.launch {
             repository.getMinistries().collect { _ministries.value = it }
             repository.getLeaderMessages().collect { _messages.value = it }
+            repository.getEvents().collect { _events.value = it }
         }
     }
 
