@@ -587,39 +587,46 @@ async function loadVerses() {
     textContainer.scrollTop = 0;
 }
 
+const DEVOTIONAL_VERSES = {
+    'Triste': [
+        { title: "O Consolo que Vem do Alto", ref: "Salmos 34:18", text: "Perto está o Senhor dos que têm o coração quebrantado e salva os de espírito oprimido." },
+        { title: "Deus Enxugará suas Lágrimas", ref: "Apocalipse 21:4", text: "Ele enxugará dos seus olhos toda lágrima. Não haverá mais morte, nem tristeza, nem choro, nem dor." },
+        { title: "Refúgio e Fortaleza", ref: "Salmos 46:1", text: "Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade." }
+    ],
+    'Cansado': [
+        { title: "Descanso para a Alma", ref: "Mateus 11:28", text: "Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei." },
+        { title: "Forças Renovadas", ref: "Isaías 40:31", text: "Mas aqueles que esperam no Senhor renovam as suas forças. Voam alto como águias; correm e não se fatigam." },
+        { title: "Socorro Bem Presente", ref: "Salmos 121:1-2", text: "Elevo os meus olhos para os montes; de onde vem o meu socorro? O meu socorro vem do Senhor, que fez o céu e a terra." }
+    ],
+    'Grato': [
+        { title: "O Sacrifício de Louvor", ref: "1 Tessalonicenses 5:18", text: "Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus para convosco." },
+        { title: "A Bondade do Senhor", ref: "Salmos 107:1", text: "Deem graças ao Senhor, porque ele é bom; o seu amor dura para sempre." },
+        { title: "Louvor de Coração", ref: "Salmos 103:1", text: "Bendiga ao Senhor a minha alma! Bendiga ao seu santo nome todo o meu ser!" }
+    ],
+    'Feliz': [
+        { title: "A Alegria do Senhor", ref: "Neemias 8:10", text: "Não vos entristeçais, porque a alegria do Senhor é a vossa força." },
+        { title: "Coração Alegre", ref: "Provérbios 15:13", text: "O coração alegre aformoseia o rosto, mas pela dor do coração o espírito se abate." },
+        { title: "Regozijo Constante", ref: "Filipenses 4:4", text: "Alegrem-se sempre no Senhor. Novamente direi: Alegrem-se!" }
+    ],
+    'default': [
+        { title: "O Renovo das Misericórdias", ref: "Lamentações 3:22-23", text: "As misericórdias do Senhor são a causa de não sermos consumidos, porque as suas compaixões não têm fim; renovam-se cada manhã." }
+    ]
+};
+
 function loadDevotional(mood = null) {
     const detail = document.getElementById('devotional-detail');
     if (!detail) return;
 
-    let title = "O Renovo das Misericórdias";
-    let reference = "Lamentações 3:22-23";
-    let text = "As misericórdias do Senhor são a causa de não sermos consumidos, porque as suas compaixões não têm fim; renovam-se cada manhã. Grande é a tua fidelidade.";
-
-    if (mood === 'Triste') {
-        title = "O Consolo que Vem do Alto";
-        reference = "Salmos 34:18";
-        text = "Perto está o Senhor dos que têm o coração quebrantado e salva os de espírito oprimido. Não se desespere, Ele cuida de cada detalhe da sua dor.";
-    } else if (mood === 'Cansado') {
-        title = "Descanso para a Alma";
-        reference = "Mateus 11:28";
-        text = "Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei. Deixe seus fardos aos pés da cruz hoje.";
-    } else if (mood === 'Grato') {
-        title = "O Sacrifício de Louvor";
-        reference = "1 Tessalonicenses 5:18";
-        text = "Em tudo dai graças, porque esta é a vontade de Deus em Cristo Jesus para convosco. Seu coração grato abre portas para o sobrenatural.";
-    } else if (mood === 'Feliz') {
-        title = "A Alegria do Senhor";
-        reference = "Neemias 8:10";
-        text = "Não vos entristeçais, porque a alegria do Senhor é a vossa força. Celebre as bênçãos que Ele tem derramado sobre sua vida!";
-    }
+    const verses = DEVOTIONAL_VERSES[mood] || DEVOTIONAL_VERSES['default'];
+    const randomVerse = verses[Math.floor(Math.random() * verses.length)];
 
     detail.innerHTML = `
         <div class="section-container" style="padding-top:20px">
             ${mood ? `<small class="gold-text">Sinto-me ${mood}</small>` : ''}
-            <h2 style="color:var(--gold); margin-top:5px">${title}</h2>
-            <p style="color:var(--light-grey); margin-bottom:20px">${reference}</p>
-            <p style="line-height:1.6">${text}</p>
-            <button class="btn-outline" style="margin-top:30px" onclick="shareDevotional('${title.replace(/'/g, "\\'")}', '${reference}', '${text.replace(/'/g, "\\'")}')">
+            <h2 style="color:var(--gold); margin-top:5px">${randomVerse.title}</h2>
+            <p style="color:var(--light-grey); margin-bottom:20px">${randomVerse.ref}</p>
+            <p style="line-height:1.6; font-size:1.1em; font-style:italic">"${randomVerse.text}"</p>
+            <button class="btn-outline" style="margin-top:30px" onclick="shareDevotional('${randomVerse.title.replace(/'/g, "\\'")}', '${randomVerse.ref}', '${randomVerse.text.replace(/'/g, "\\'")}')">
                 Compartilhar
             </button>
         </div>

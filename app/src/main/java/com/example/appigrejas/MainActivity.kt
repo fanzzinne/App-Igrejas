@@ -37,6 +37,8 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -251,13 +253,26 @@ fun MainScreen(
                         },
                         onDevotionalClick = {
                             navController.navigate(Screen.Devotional.route)
+                        },
+                        onMoodClick = { mood ->
+                            navController.navigate(Screen.Devotional.route + "?mood=$mood")
                         }
                     )
                 }
                 composable(Screen.Media.route) { SermonLibraryScreen(windowSizeClass) }
                 composable(Screen.Bible.route) { BibleTabScreen(windowSizeClass) }
                 composable(Screen.Community.route) { CommunityScreen(windowSizeClass) }
-                composable(Screen.Devotional.route) { DevotionalScreen(windowSizeClass) }
+                composable(
+                    route = Screen.Devotional.route + "?mood={mood}",
+                    arguments = listOf(navArgument("mood") { 
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null 
+                    })
+                ) { backStackEntry ->
+                    val mood = backStackEntry.arguments?.getString("mood")
+                    DevotionalScreen(windowSizeClass, mood)
+                }
                 composable(Screen.Giving.route) { DigitalGivingScreen(windowSizeClass, homeViewModel) }
             }
         }
@@ -301,7 +316,8 @@ fun HomeScreen(
     windowSizeClass: WindowSizeClass,
     viewModel: HomeViewModel = viewModel(),
     onActionClick: (String) -> Unit = {},
-    onDevotionalClick: () -> Unit = {}
+    onDevotionalClick: () -> Unit = {},
+    onMoodClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val localContext = LocalContext.current
@@ -318,7 +334,6 @@ fun HomeScreen(
             BannerCarousel(uiState?.banners ?: emptyList(), isExpanded)
         }
 
-        // Quick Actions
         item {
             QuickActionsGrid(isExpanded, onActionClick = { action ->
                 if (action == "Ao Vivo") {
@@ -333,10 +348,7 @@ fun HomeScreen(
 
         // Humor Bar
         item {
-            HumorBar(onMoodClick = { mood ->
-                onActionClick("Bíblia")
-                // In a real app, we would pass the mood to the Bible/Devotional screen via a SharedViewModel or Navigation argument
-            })
+            HumorBar(onMoodClick = onMoodClick)
         }
 
         // News/Events Horizontal Grid
