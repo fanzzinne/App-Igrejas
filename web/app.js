@@ -145,10 +145,47 @@ function setupInstallPrompt() {
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker registrado!', reg))
-                .catch(err => console.log('Falha ao registrar Service Worker', err));
+            navigator.serviceWorker.register('./sw.js').then(reg => {
+                console.log('Service Worker registrado!');
+
+                // Se houver um worker esperando, mostra a notificação
+                if (reg.waiting) {
+                    showUpdateNotification(reg.waiting);
+                }
+
+                // Escuta por novos workers instalando
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateNotification(newWorker);
+                        }
+                    });
+                });
+            }).catch(err => console.log('Falha ao registrar Service Worker', err));
         });
+
+        // Recarrega a página quando o novo Service Worker assume o controle
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                window.location.reload();
+                refreshing = true;
+            }
+        });
+    }
+}
+
+function showUpdateNotification(worker) {
+    const notification = document.getElementById('update-notification');
+    const btn = document.getElementById('update-button');
+
+    if (notification && btn) {
+        notification.style.display = 'block';
+        btn.onclick = () => {
+            worker.postMessage('SKIP_WAITING');
+            notification.style.display = 'none';
+        };
     }
 }
 

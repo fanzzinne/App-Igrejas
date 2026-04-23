@@ -106,10 +106,17 @@ fun WeeklyAgendaList(viewModel: CommunityViewModel, isExpanded: Boolean) {
 
 @Composable
 fun AgendaCard(event: EventResponse) {
-    val dia = event.Data?.takeIf { it.isNotBlank() } ?: event.Dia ?: ""
-    val titulo = event.Titulo?.takeIf { it.isNotBlank() } ?: event.Evento ?: ""
-    val hora = event.Horario?.takeIf { it.isNotBlank() } ?: event.Hora ?: ""
-    val local = event.Local ?: ""
+    // Função auxiliar para limpar textos "undefined" ou nulos vindo da API
+    fun cleanText(text: String?): String {
+        return if (text == null || text.trim().lowercase() == "undefined" || text.trim().isEmpty()) "" else text.trim()
+    }
+
+    val dia = cleanText(event.Data).takeIf { it.isNotBlank() } ?: cleanText(event.Dia)
+    val titulo = cleanText(event.Titulo).takeIf { it.isNotBlank() } ?: cleanText(event.Evento)
+    val hora = cleanText(event.Horario).takeIf { it.isNotBlank() } ?: cleanText(event.Hora)
+    val local = cleanText(event.Local)
+
+    if (titulo.isBlank() && dia.isBlank()) return // Não mostra cards totalmente vazios
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -137,17 +144,28 @@ fun AgendaCard(event: EventResponse) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = dia, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    if (dia.isNotBlank() && (hora.isNotBlank() || local.isNotBlank())) {
-                        Text(text = "  •  ", color = Gold, fontSize = 14.sp)
+                if (dia.isNotBlank() || hora.isNotBlank() || local.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (dia.isNotBlank()) {
+                            Text(text = dia, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                        if (dia.isNotBlank() && (hora.isNotBlank() || local.isNotBlank())) {
+                            Text(text = "  •  ", color = Gold, fontSize = 14.sp)
+                        }
+                        if (hora.isNotBlank()) {
+                            Text(text = hora, color = Color.White, fontSize = 14.sp)
+                        }
+                        if (hora.isNotBlank() && local.isNotBlank()) {
+                            Text(text = "  •  ", color = Gold, fontSize = 14.sp)
+                        }
+                        if (local.isNotBlank()) {
+                            Text(text = local, color = Color.LightGray, fontSize = 14.sp, maxLines = 1)
+                        }
                     }
-                    Text(text = hora, color = Color.White, fontSize = 14.sp)
-                    if (hora.isNotBlank() && local.isNotBlank()) {
-                        Text(text = "  •  ", color = Gold, fontSize = 14.sp)
-                    }
-                    Text(text = local, color = Color.LightGray, fontSize = 14.sp)
                 }
             }
         }
