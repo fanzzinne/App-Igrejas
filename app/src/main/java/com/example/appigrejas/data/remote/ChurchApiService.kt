@@ -19,10 +19,14 @@ data class ChurchResponse(
     @Json(name = "sermoes") val sermoes: List<SermonResponse> = emptyList(),
     @Json(name = "ministerios") val ministerios: List<MinistryResponse> = emptyList(),
     @Json(name = "mensagemLider") val mensagemLider: List<LeaderMessageResponse> = emptyList(),
+    @Json(name = "galeria") val galeria: List<GalleryResponse> = emptyList(),
     // Suporta tanto objeto único quanto lista (padrão planilha)
     @Json(name = "config") val config: Any? = null,
     @Json(name = "configuracoes") val configuracoes: Any? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class GalleryResponse(val Titulo: String? = "", val ImagemUrl: String)
 
 @JsonClass(generateAdapter = true)
 data class ConfigResponse(
@@ -33,7 +37,11 @@ data class ConfigResponse(
     val LinkAoVivo: String? = null,
     val AoVivo: String? = null,
     val ChavePix: String? = null,
-    val Pix: String? = null
+    val Pix: String? = null,
+    val LinkGaleria: String? = null,
+    val Galeria: String? = null,
+    val VersiculoDia: String? = null,
+    val ReferenciaDia: String? = null
 )
 
 @JsonClass(generateAdapter = true)

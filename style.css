@@ -484,3 +484,72 @@ footer p {
     color: var(--light-grey);
     opacity: 0.6;
 }
+
+/* Hub Grid (Portal do Membro) */
+.member-portal-banner {
+    background-color: var(--dark-grey);
+    padding: 15px 25px;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.member-portal-banner span {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.hub-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.hub-item {
+    background-color: var(--dark-grey);
+    border-radius: 15px;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.hub-item:active { transform: scale(0.95); }
+
+.hub-icon-circle {
+    width: 50px;
+    height: 50px;
+    background-color: var(--white);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.hub-icon-circle i {
+    color: var(--black);
+    font-size: 20px;
+}
+
+.hub-item span {
+    font-size: 11px;
+    color: var(--white);
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+@keyframes ticker {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+}
+
+#agenda-ticker-content {
+    animation-duration: 50s; /* Aumentado para 50 segundos para ser mais lento */
+}

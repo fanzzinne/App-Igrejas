@@ -7,7 +7,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -29,12 +31,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -73,16 +78,26 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Media : Screen("media", "Mídia", Icons.Default.PlayCircle)
     object Bible : Screen("bible", "Bíblia", Icons.AutoMirrored.Filled.MenuBook)
     object Community : Screen("community", "Comunidade", Icons.Default.Groups)
-    object Devotional : Screen("devotional", "Devocional", Icons.Default.Favorite)
     object Giving : Screen("giving", "Contribuição", Icons.Default.Paid)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    windowSizeClass: WindowSizeClass,
-    homeViewModel: HomeViewModel = viewModel()
+    windowSizeClass: WindowSizeClass
 ) {
+    val context = LocalContext.current
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = androidx.lifecycle.viewmodel.MutableCreationExtras().apply {
+            set(androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY, context.applicationContext as android.app.Application)
+        }.let { extras ->
+            object : androidx.lifecycle.ViewModelProvider.Factory {
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                    return HomeViewModel(context.applicationContext as android.app.Application) as T
+                }
+            }
+        }
+    )
     val navController = rememberNavController()
     val uiState by homeViewModel.uiState.collectAsState()
     val localContext = LocalContext.current
@@ -124,7 +139,10 @@ fun MainScreen(
                 NomeIgreja = map.findKey("NomeIgreja", "Nome", "Igreja"),
                 LogoUrl = map.findKey("LogoUrl", "Logo", "Imagem", "Url"),
                 LinkAoVivo = map.findKey("LinkAoVivo", "AoVivo", "Live", "Video"),
-                ChavePix = map.findKey("ChavePix", "Pix", "Chave")
+                ChavePix = map.findKey("ChavePix", "Pix", "Chave"),
+                LinkGaleria = map.findKey("LinkGaleria", "Galeria", "Fotos"),
+                VersiculoDia = map.findKey("VersiculoDia", "Versiculo", "Palavra"),
+                ReferenciaDia = map.findKey("ReferenciaDia", "Referencia", "Texto")
             )
         } else {
             ConfigResponse(NomeIgreja = defaultName, LogoUrl = defaultLogo)
@@ -299,80 +317,45 @@ fun MainScreen(
                             when (action) {
                                 "Bíblia" -> navController.navigate(Screen.Bible.route)
                                 "Oração" -> {
-                                    navController.navigate(Screen.Community.route)
+                                    navController.navigate(Screen.Community.route + "?tab=3")
                                 }
                                 "Contribuição" -> navController.navigate(Screen.Giving.route)
                                 "Mural" -> {
                                     navController.navigate(Screen.Community.route + "?tab=99")
                                 }
-                                "Agenda Semanal" -> navController.navigate(Screen.Community.route)
+                                "Ministérios" -> {
+                                    navController.navigate(Screen.Community.route + "?tab=1")
+                                }
+                                "Agenda Semanal" -> navController.navigate(Screen.Community.route + "?tab=2")
                             }
                         },
-                        onDevotionalClick = {
-                            navController.navigate(Screen.Devotional.route)
-                        },
                         onMoodClick = { mood ->
-                            navController.navigate(Screen.Devotional.route + "?mood=$mood")
+                            navController.navigate(Screen.Community.route + "?tab=0&mood=$mood")
                         }
                     )
                 }
                 composable(Screen.Media.route) { SermonLibraryScreen(windowSizeClass) }
-                composable(Screen.Bible.route) { BibleTabScreen(windowSizeClass) }
+                composable(Screen.Bible.route) { BibleScreen(windowSizeClass) }
                 composable(
-                    route = Screen.Community.route + "?tab={tab}",
-                    arguments = listOf(navArgument("tab") { 
-                        type = NavType.IntType
-                        defaultValue = 0 
-                    })
+                    route = Screen.Community.route + "?tab={tab}&mood={mood}",
+                    arguments = listOf(
+                        navArgument("tab") { 
+                            type = NavType.IntType
+                            defaultValue = -1 // Default para o Hub
+                        },
+                        navArgument("mood") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null 
+                        }
+                    )
                 ) { backStackEntry ->
-                    val tabIndex = backStackEntry.arguments?.getInt("tab") ?: 0
-                    CommunityScreen(windowSizeClass, tabIndex = tabIndex)
-                }
-                composable(
-                    route = Screen.Devotional.route + "?mood={mood}",
-                    arguments = listOf(navArgument("mood") { 
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null 
-                    })
-                ) { backStackEntry ->
+                    val tabIndex = backStackEntry.arguments?.getInt("tab") ?: -1
                     val mood = backStackEntry.arguments?.getString("mood")
-                    DevotionalScreen(windowSizeClass, mood)
+                    CommunityScreen(windowSizeClass, tabIndex = tabIndex, mood = mood, config = churchConfig)
                 }
                 composable(Screen.Giving.route) { DigitalGivingScreen(windowSizeClass, homeViewModel) }
             }
-        }
-    }
-}
-
-@Composable
-fun BibleTabScreen(windowSizeClass: WindowSizeClass) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Bíblia", "Devocional")
-
-    Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = Color.Black,
-            contentColor = Gold,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                    color = Gold
-                )
-            }
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(text = title, color = if (selectedTabIndex == index) Gold else Color.Gray) }
-                )
-            }
-        }
-        when (selectedTabIndex) {
-            0 -> BibleScreen(windowSizeClass)
-            1 -> DevotionalScreen(windowSizeClass)
         }
     }
 }
@@ -382,11 +365,18 @@ fun HomeScreen(
     windowSizeClass: WindowSizeClass,
     viewModel: HomeViewModel = viewModel(),
     onActionClick: (String) -> Unit = {},
-    onDevotionalClick: () -> Unit = {},
     onMoodClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val hasNewMural by viewModel.hasNewMural.collectAsState()
     val localContext = LocalContext.current
+
+    LaunchedEffect(hasNewMural) {
+        if (hasNewMural) {
+            android.widget.Toast.makeText(localContext, "Nova mensagem postada no Mural da Liderança!", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
 
     LazyColumn(
@@ -401,8 +391,13 @@ fun HomeScreen(
         }
 
         item {
-            QuickActionsGrid(isExpanded, onActionClick = { action ->
-                if (action == "Ao Vivo") {
+            QuickActionsGrid(
+                isExpanded, 
+                hasNewMural = viewModel.hasNewMural.collectAsState().value,
+                onActionClick = { action ->
+                    if (action == "Mural") viewModel.markMuralAsSeen()
+                    
+                    if (action == "Ao Vivo") {
                     val configData = uiState?.config ?: uiState?.configuracoes
                     val liveUrl = when(configData) {
                         is Map<*, *> -> configData["LinkAoVivo"] as? String ?: configData["AoVivo"] as? String
@@ -428,29 +423,9 @@ fun HomeScreen(
             NewsHorizontalGrid()
         }
 
-        // Devotional Shortcut
+        // Ticker de Agenda Semanal
         item {
-            SectionTitle("Devocional de Hoje")
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                onClick = onDevotionalClick,
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.2f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "O Renovo das Misericórdias", color = Gold, fontWeight = FontWeight.Bold)
-                        Text(text = "Lamentações 3:22-23", color = Color.Gray, fontSize = 12.sp)
-                    }
-                    Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = Gold)
-                }
-            }
+            AgendaTicker(uiState?.eventos?.takeIf { it.isNotEmpty() } ?: uiState?.agenda ?: emptyList())
         }
 
         // Footer
@@ -519,10 +494,10 @@ fun BannerCarousel(banners: List<BannerResponse>, isExpanded: Boolean = false) {
 }
 
 @Composable
-fun QuickActionsGrid(isExpanded: Boolean = false, onActionClick: (String) -> Unit) {
+fun QuickActionsGrid(isExpanded: Boolean = false, hasNewMural: Boolean = false, onActionClick: (String) -> Unit) {
     val actions = listOf(
         QuickAction("Mural", Icons.Default.Campaign),
-        QuickAction("Oração", Icons.Default.VolunteerActivism),
+        QuickAction("Ministérios", Icons.Default.Groups),
         QuickAction("Contribuição", Icons.Default.Paid),
         QuickAction("Agenda Semanal", Icons.Default.CalendarMonth)
     )
@@ -541,18 +516,28 @@ fun QuickActionsGrid(isExpanded: Boolean = false, onActionClick: (String) -> Uni
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Surface(
-                    onClick = { onActionClick(action.label) },
-                    modifier = Modifier.size(64.dp),
-                    shape = CircleShape,
-                    color = Gold
+                BadgedBox(
+                    badge = {
+                        if (action.label == "Mural" && hasNewMural) {
+                            Badge(containerColor = Color.Red) {
+                                Text("!", color = Color.White)
+                            }
+                        }
+                    }
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = action.icon,
-                            contentDescription = action.label,
-                            tint = Color.Black
-                        )
+                    Surface(
+                        onClick = { onActionClick(action.label) },
+                        modifier = Modifier.size(64.dp),
+                        shape = CircleShape,
+                        color = Gold
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = action.icon,
+                                contentDescription = action.label,
+                                tint = Color.Black
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -667,6 +652,82 @@ fun NewsHorizontalGrid() {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AgendaTicker(events: List<com.example.appigrejas.data.remote.EventResponse>) {
+    if (events.isEmpty()) return
+
+    // Função local para formatar data/hora (respeitando o que foi digitado ou convertendo ISO para GMT-3)
+    fun formatToBR(value: String?, isTime: Boolean = false): String {
+        if (value == null || value.isBlank() || value.lowercase() == "undefined") return ""
+        
+        // Se já tiver formato de data BR (ex: 22/04) ou hora (ex: 19:00), retorna como está
+        if (value.contains("/") && value.length <= 10) return value
+        if (value.contains(":") && !value.contains("T") && value.length <= 5) return value
+
+        return try {
+            val inputFormat = if (value.contains("T")) {
+                java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            } else if (value.contains("-") && value.length > 8) {
+                java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            } else null
+
+            if (inputFormat != null) {
+                inputFormat.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                val date = inputFormat.parse(value)
+                val outputFormat = if (isTime) {
+                    java.text.SimpleDateFormat("HH:mm", java.util.Locale("pt", "BR"))
+                } else {
+                    java.text.SimpleDateFormat("dd/MM", java.util.Locale("pt", "BR"))
+                }
+                outputFormat.timeZone = java.util.TimeZone.getTimeZone("America/Sao_Paulo")
+                date?.let { outputFormat.format(it) } ?: value
+            } else value
+        } catch (e: Exception) { value }
+    }
+
+    val tickerText = remember(events) {
+        events.joinToString("   ✦   ") { ev -> // Separador mais elegante
+            val titulo = ev.Titulo?.takeIf { it.isNotBlank() } ?: ev.Evento ?: ""
+            val dia = formatToBR(ev.Data?.takeIf { it.isNotBlank() } ?: ev.Dia)
+            val hora = formatToBR(ev.Horario?.takeIf { it.isNotBlank() } ?: ev.Hora, isTime = true)
+            val info = listOfNotNull(dia.takeIf { it.isNotBlank() }, hora.takeIf { it.isNotBlank() }).joinToString(" às ")
+            "${titulo.uppercase()} ${if (info.isNotBlank()) "($info)" else ""}"
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "ticker")
+    val xOffset by infiniteTransition.animateFloat(
+        initialValue = 1.5f, // Inicia um pouco mais longe
+        targetValue = -1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 40000, easing = LinearEasing), // Mais lento (40s)
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "xOffset"
+    )
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        color = Color(0xFF1A1A1A),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Gold.copy(alpha = 0.2f))
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+            val width = maxWidth
+            Text(
+                text = tickerText,
+                color = Gold,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.offset(x = xOffset * width),
+                maxLines = 1,
+                softWrap = false
+            )
         }
     }
 }

@@ -6,17 +6,20 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
@@ -24,9 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -46,67 +51,224 @@ import java.util.*
 @Composable
 fun CommunityScreen(
     windowSizeClass: WindowSizeClass,
-    tabIndex: Int = 0,
-    viewModel: CommunityViewModel = viewModel()
+    tabIndex: Int = -1, // -1: Hub (Grid), 0: Devocional, 1: Ministérios, etc.
+    mood: String? = null,
+    viewModel: CommunityViewModel = viewModel(),
+    homeViewModel: com.example.appigrejas.viewmodel.HomeViewModel = viewModel(),
+    config: com.example.appigrejas.data.remote.ConfigResponse? = null
 ) {
-    val isMural = tabIndex == 99
-    // Adicionado remember(tabIndex) para reagir a mudanças na navegação
-    var selectedTab by remember(tabIndex) { mutableIntStateOf(if (isMural) 0 else tabIndex) }
-    val tabs = listOf("Ministérios", "Agenda Semanal", "Pedidos de Oração")
+    var currentView by remember(tabIndex) { mutableIntStateOf(tabIndex) }
     val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+    val localContext = LocalContext.current
+    val uiState by homeViewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        if (isMural) {
-            Text(
-                text = "Mural da Liderança",
-                color = Gold,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
+        if (currentView == -1) {
+            CommunityHub(
+                onItemClick = { viewIndex -> currentView = viewIndex },
+                isExpanded = isExpanded
             )
         } else {
-            ScrollableTabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Black,
-                contentColor = Gold,
-                edgePadding = 16.dp,
-                divider = {},
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = Gold
-                    )
-                }
+            // Header para voltar ao Hub
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
-                            Text(
-                                text = title,
-                                fontSize = 14.sp,
-                                color = if (selectedTab == index) Gold else Color.Gray
-                            )
-                        }
-                    )
+                IconButton(onClick = { currentView = -1 }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Gold)
                 }
+                Text(
+                    text = when (currentView) {
+                        0 -> "Devocional"
+                        1 -> "Ministérios"
+                        2 -> "Agenda Semanal"
+                        3 -> "Pedidos de Oração"
+                        4 -> "Nossas Igrejas"
+                        5 -> "Galeria"
+                        99 -> "Mural da Liderança"
+                        else -> "Comunidade"
+                    },
+                    color = Gold,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        }
 
-        Box(modifier = Modifier.weight(1f)) {
-            if (isMural) {
-                LeaderMessagesList(viewModel, isExpanded)
-            } else {
-                when (selectedTab) {
-                    0 -> MinistryList(viewModel, isExpanded)
-                    1 -> WeeklyAgendaList(viewModel, isExpanded)
-                    2 -> PrayerRequestScreen(viewModel, isExpanded)
+            Box(modifier = Modifier.weight(1f)) {
+                when (currentView) {
+                    0 -> DevotionalScreen(windowSizeClass, mood, config)
+                    1 -> MinistryList(viewModel, isExpanded)
+                    2 -> WeeklyAgendaList(viewModel, isExpanded)
+                    3 -> PrayerRequestScreen(viewModel, isExpanded)
+                    4 -> ChurchLocationsScreen(windowSizeClass)
+                    5 -> InternalGallery(uiState?.galeria ?: emptyList(), isExpanded)
+                    99 -> LeaderMessagesList(viewModel, isExpanded)
                 }
             }
         }
     }
 }
+
+@Composable
+fun InternalGallery(images: List<com.example.appigrejas.data.remote.GalleryResponse>, isExpanded: Boolean) {
+    var selectedImageUrl by remember { mutableStateOf<String?>(null) }
+
+    if (images.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Nenhuma foto disponível na galeria", color = Color.Gray)
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(if (isExpanded) 3 else 2),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(images) { image ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clickable { selectedImageUrl = image.ImagemUrl },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    AsyncImage(
+                        model = image.ImagemUrl,
+                        contentDescription = image.Titulo,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
+
+    // Zoom da Imagem
+    if (selectedImageUrl != null) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { selectedImageUrl = null },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f))
+                    .clickable { selectedImageUrl = null },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = selectedImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = { selectedImageUrl = null },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CommunityHub(onItemClick: (Int) -> Unit, isExpanded: Boolean) {
+    val items = listOf(
+        HubItem("Agenda Semanal", Icons.Default.Event, 2),
+        HubItem("Devocional", Icons.Default.Description, 0),
+        HubItem("Galeria", Icons.Default.Collections, 5),
+        HubItem("Ministérios", Icons.Default.Groups, 1),
+        HubItem("Mural", Icons.Default.Campaign, 99),
+        HubItem("Nossas Igrejas", Icons.Default.Place, 4),
+        HubItem("Pedidos de Oração", Icons.Default.Favorite, 3)
+    )
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            val columns = if (isExpanded) 4 else 3
+            val rows = items.chunked(columns)
+            
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                rows.forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        rowItems.forEach { item ->
+                            HubCard(item, Modifier.weight(1f)) {
+                                if (item.index >= 0) onItemClick(item.index)
+                            }
+                        }
+                        // Preencher espaço vazio se a linha não estiver completa
+                        if (rowItems.size < columns) {
+                            repeat(columns - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        item {
+            Spacer(modifier = Modifier.height(32.dp))
+            AppFooter()
+        }
+    }
+}
+
+@Composable
+fun HubCard(item: HubItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier
+            .aspectRatio(0.9f)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = Color.White
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = item.label,
+                color = Color.White,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 14.sp
+            )
+        }
+    }
+}
+
+data class HubItem(val label: String, val icon: ImageVector, val index: Int)
 
 @Composable
 fun WeeklyAgendaList(viewModel: CommunityViewModel, isExpanded: Boolean) {
@@ -130,15 +292,18 @@ fun WeeklyAgendaList(viewModel: CommunityViewModel, isExpanded: Boolean) {
 
 @Composable
 fun AgendaCard(event: EventResponse) {
-    // Função para formatar data/hora para o padrão Brasil
+    // Função para formatar data/hora para o padrão Brasil (GMT-3)
     fun formatToBR(value: String?, isTime: Boolean = false): String {
         if (value == null || value.isBlank() || value.lowercase() == "undefined") return ""
         
+        // Se já tiver formato de data BR (ex: 22/04) ou hora (ex: 19:00), retorna como está
+        if (value.contains("/") && value.length <= 10) return value
+        if (value.contains(":") && !value.contains("T") && value.length <= 5) return value
+
         return try {
-            // Tenta detectar se é uma data completa ISO (comum em APIs)
             val inputFormat = if (value.contains("T")) {
                 SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
-            } else if (value.contains("-")) {
+            } else if (value.contains("-") && value.length > 8) {
                 SimpleDateFormat("yyyy-MM-dd", Locale.US)
             } else {
                 null

@@ -28,6 +28,11 @@ const MOCK_DATA = {
         { Titulo: "Escola Bíblica", Data: "Domingo", Horario: "09:00", Local: "Sede" },
         { Titulo: "Células", Data: "Quarta-feira", Horario: "20:00", Local: "Casas" },
         { Titulo: "Culto de Jovens", Data: "Sábado", Horario: "19:30", Local: "Anexo" }
+    ],
+    galeria: [
+        { Titulo: "Batismo 2025", ImagemUrl: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1000" },
+        { Titulo: "Conferência", ImagemUrl: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=1000" },
+        { Titulo: "Ação Social", ImagemUrl: "https://images.unsplash.com/photo-1499209974431-9dac3adaf471?q=80&w=1000" }
     ]
 };
 
@@ -63,25 +68,35 @@ function getEmbedUrl(url) {
     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
 }
 
-// Função global para formatar data e hora no padrão brasileiro
+// Função global para formatar data e hora no padrão brasileiro (GMT-3)
 const formatDateBR = (dateValue, compact = false) => {
-    if (!dateValue) return '';
+    if (!dateValue || dateValue.toString().toLowerCase() === 'undefined') return '';
 
-    const dateStr = dateValue.toString();
+    const dateStr = dateValue.toString().trim();
+
+    // Se já estiver formatado como BR (xx/xx) ou hora (xx:xx), mantém original
+    if (dateStr.includes('/') && dateStr.length <= 10) return dateStr;
+    if (dateStr.includes(':') && !dateStr.includes('T') && dateStr.length <= 5) return dateStr;
+
     const dateObj = new Date(dateValue);
 
-    if (!isNaN(dateObj.getTime()) && (dateStr.includes('-') || typeof dateValue === 'number')) {
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    if (!isNaN(dateObj.getTime()) && (dateStr.includes('-') || typeof dateValue === 'number' || dateStr.includes('T'))) {
+        // Forçar GMT-3 usando Intl.DateTimeFormat
+        const options = {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        };
 
-        if (compact) return `${day}/${month}`;
-        return `${day}/${month} às ${hours}:${minutes}`;
-    }
+        const formatter = new Intl.DateTimeFormat('pt-BR', options);
+        const parts = formatter.formatToParts(dateObj);
+        const find = (type) => parts.find(p => p.type === type)?.value || '';
 
-    if (compact) {
-        return dateStr.split('/20')[0];
+        if (compact) return `${find('day')}/${find('month')}`;
+        return `${find('day')}/${find('month')} às ${find('hour')}:${find('minute')}`;
     }
 
     return dateStr;
@@ -241,14 +256,11 @@ function openLiveStream() {
 }
 
 function selectMood(mood) {
-    // Navega para a tela da Bíblia (índice 2 na nav)
-    navigateTo('bible', 2);
-
-    // Switch para a aba de Devocional
-    const tabs = document.querySelectorAll('#bible .tab-btn');
-    if (tabs[1]) switchSubTab('bible-devotional', 'bible-content', tabs[1]);
+    // Navega para a tela da Comunidade (índice 3 na nav)
+    navigateTo('community', 3);
 
     // Carrega o conteúdo baseado no humor
+    showCommunitySection('devotional', null);
     loadDevotional(mood);
 }
 
@@ -267,9 +279,15 @@ function navigateTo(targetId, elementOrIndex) {
     if (target) target.classList.add('active');
 
     if (targetId === 'community') {
-        const tabs = document.getElementById('community-tabs');
-        if (tabs) tabs.style.display = 'flex';
-        showCommunitySection('ministries');
+        showCommunitySection('hub');
+    }
+
+    // Garantir que ao navegar para Bíblia, mostre os controles
+    if (targetId === 'bible') {
+        const bibleContent = document.getElementById('bible-content');
+        if (bibleContent) bibleContent.classList.add('active');
+        const bibleDevotional = document.getElementById('bible-devotional');
+        if (bibleDevotional) bibleDevotional.classList.remove('active');
     }
 }
 
@@ -280,7 +298,9 @@ function switchSubTab(showId, hideId, btn) {
     btn.parentNode.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
-    if (showId === 'bible-devotional') loadDevotional();
+    if (showId === 'bible-devotional') {
+        loadDevotional();
+    }
 }
 
 async function fetchData() {
@@ -288,6 +308,10 @@ async function fetchData() {
         const response = await fetch(`${API_URL}?action=all`);
         const data = await response.json();
         window.appData = data;
+
+        // Verifica novos conteúdos no Mural
+        checkNewMuralContent(data);
+
         setupBranding(data);
         renderContent(data);
     } catch (error) {
@@ -299,6 +323,7 @@ async function fetchData() {
 
 function renderContent(data) {
     const bannerCarousel = document.getElementById('banner-carousel');
+
     const banners = data.banners || MOCK_DATA.banners;
     if (bannerCarousel) {
         bannerCarousel.innerHTML = banners.map(item => `
@@ -328,6 +353,28 @@ function renderContent(data) {
         `).join('');
     }
 
+    // Ticker de Agenda Semanal
+    const tickerContent = document.getElementById('agenda-ticker-content');
+    if (tickerContent) {
+        const eventos = (data.eventos && data.eventos.length > 0) ? data.eventos : (data.agenda || MOCK_DATA.eventos);
+
+        const tickerText = eventos.map(ev => {
+            const titulo = (ev.Titulo || ev.Evento || "").toUpperCase();
+
+            // Lógica de formatação melhorada
+            const diaRaw = ev.Data || ev.Dia || "";
+            const horaRaw = ev.Horario || ev.Hora || "";
+
+            let dia = formatDateBR(diaRaw, true) || diaRaw;
+            let hora = (horaRaw && horaRaw.includes(':')) ? horaRaw : (formatDateBR(horaRaw) ? formatDateBR(horaRaw).split(' às ')[1] : horaRaw);
+
+            const info = [dia, hora].filter(Boolean).join(' às ');
+            return `${titulo} ${info ? '(' + info + ')' : ''}`;
+        }).join('   ✦   ');
+
+        tickerContent.innerText = tickerText + "   ✦   " + tickerText; // Duplicado para loop infinito suave
+    }
+
     const sermonsList = document.getElementById('sermons-list');
     const sermoes = data.sermoes || MOCK_DATA.sermoes;
     if (sermonsList) {
@@ -348,14 +395,68 @@ function renderContent(data) {
             `;
         }).join('');
     }
+
+    // Galeria de Fotos
+    if (data.galeria) {
+        window.appData.galeria = data.galeria;
+    }
 }
 
 function showCommunitySection(section, btn, isMural = false) {
     const content = document.getElementById('com-content');
-    const tabs = document.getElementById('community-tabs');
 
-    if (isMural && tabs) {
-        tabs.style.display = 'none';
+    // Se for 'hub', mostramos a grade de ícones
+    if (section === 'hub') {
+        content.innerHTML = `
+            <div class="section-container" style="padding-top:20px">
+                <div class="hub-grid">
+                    <div class="hub-item" onclick="showCommunitySection('events', null)">
+                        <div class="hub-icon-circle"><i class="fas fa-calendar-day"></i></div>
+                        <span>Agenda Semanal</span>
+                    </div>
+                    <div class="hub-item" onclick="showCommunitySection('devotional', null)">
+                        <div class="hub-icon-circle"><i class="fas fa-file-alt"></i></div>
+                        <span>Devocional</span>
+                    </div>
+                    <div class="hub-item" onclick="showCommunitySection('gallery', null)">
+                        <div class="hub-icon-circle"><i class="fas fa-images"></i></div>
+                        <span>Galeria</span>
+                    </div>
+                    <div class="hub-item" onclick="showCommunitySection('ministries', null)">
+                        <div class="hub-icon-circle"><i class="fas fa-users"></i></div>
+                        <span>Ministérios</span>
+                    </div>
+                    <div class="hub-item" onclick="showCommunitySection('leadership', null, true)">
+                        <div class="hub-icon-circle"><i class="fas fa-bullhorn"></i></div>
+                        <span>Mural</span>
+                    </div>
+                    <div class="hub-item" onclick="showCommunitySection('locations', null)">
+                        <div class="hub-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
+                        <span>Nossas Igrejas</span>
+                    </div>
+                    <div class="hub-item" onclick="navigateTo('prayer-view', 4)">
+                        <div class="hub-icon-circle"><i class="fas fa-heart"></i></div>
+                        <span>Pedidos de Oração</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Botão de Voltar para o Hub
+    const backBtn = `<button class="btn-outline" style="width: auto; padding: 5px 15px; margin-bottom: 20px; font-size: 12px" onclick="showCommunitySection('hub')"><i class="fas fa-arrow-left"></i> Voltar ao Menu</button>`;
+
+    // Limpar alerta do Mural ao visualizar
+    if (isMural || section === 'leadership') {
+        const badge = document.getElementById('mural-badge');
+        if (badge) badge.remove();
+
+        const list = window.appData?.mensagemLider || [];
+        if (list.length > 0) {
+            const latest = list[0];
+            localStorage.setItem('last_mural_id', latest.Nome + latest.Mensagem);
+        }
     }
 
     if (btn) {
@@ -363,9 +464,50 @@ function showCommunitySection(section, btn, isMural = false) {
         btn.classList.add('active');
     }
 
-    if (section === 'ministries') {
-        const list = window.appData?.ministerios || MOCK_DATA.ministerios;
-        content.innerHTML = `<div class="section-container" style="padding-top:20px">` + list.map(m => `
+    if (section === 'devotional') {
+        content.innerHTML = `<div class="section-container" style="padding-top:20px">${backBtn}<div id="bible-devotional" class="sub-view active"><div class="full-devotional" id="devotional-detail"></div></div></div>`;
+        loadDevotional();
+    } else if (section === 'gallery') {
+        const galeria = window.appData?.galeria || MOCK_DATA.galeria;
+
+        if (galeria && galeria.length > 0) {
+            content.innerHTML = `
+                <div class="section-container" style="padding-top:20px">
+                    ${backBtn}
+                    <h4 style="color:var(--gold); margin-bottom:20px; text-align:center">Galeria de Fotos</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        ${galeria.map(img => `
+                            <div class="gallery-item" onclick="openZoomImage('${img.ImagemUrl}')" style="aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #1A1A1A; cursor: pointer">
+                                <img src="${img.ImagemUrl}" style="width: 100%; height: 100%; object-fit: cover">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `<div class="section-container" style="padding-top:20px">${backBtn}<h4 style="color:var(--gold)">Galeria de Fotos</h4><p style="margin-top:20px; opacity:0.7">Em breve: Momentos especiais da nossa igreja.</p></div>`;
+        }
+    } else if (section === 'locations') {
+        content.innerHTML = `<div class="section-container" style="padding-top:20px">${backBtn}
+            <h4 style="color:var(--gold); margin-bottom:20px">Nossas Igrejas</h4>
+            <div class="devotional-card" style="margin-bottom:16px; border: 2px solid var(--gold)">
+                <div style="flex: 1">
+                    <h4 style="color:var(--gold)">Igreja Sede</h4>
+                    <p style="font-size:13px; margin-top:5px">Av. Principal, 1000 - Centro, SP</p>
+                    <small style="opacity:0.7">(11) 99999-9999</small>
+                    <button class="btn-gold" style="padding: 8px; margin-top: 15px" onclick="window.open('https://maps.google.com')">Ver no Mapa</button>
+                </div>
+            </div>
+            <div class="devotional-card" style="margin-bottom:16px">
+                <div style="flex: 1">
+                    <h4>Filial Zona Norte</h4>
+                    <p style="font-size:13px; margin-top:5px">Rua das Flores, 500 - Santana, SP</p>
+                    <button class="btn-outline" style="padding: 8px; margin-top: 15px" onclick="window.open('https://maps.google.com')">Ver no Mapa</button>
+                </div>
+            </div>
+        </div>`;
+    } else if (section === 'ministries') {
+        content.innerHTML = `<div class="section-container" style="padding-top:20px">${backBtn}` + (window.appData?.ministerios || MOCK_DATA.ministerios).map(m => `
             <div class="devotional-card" style="margin-bottom:16px; display:block; padding:0; overflow:hidden">
                 <img src="${m.ImagemUrl || 'https://via.placeholder.com/400x120/1A1A1A/FFD700?text=Ministerio'}"
                      style="width: 100%; height: 120px; object-fit: cover; border-bottom: 1px solid rgba(255, 215, 0, 0.2);">
@@ -377,25 +519,18 @@ function showCommunitySection(section, btn, isMural = false) {
             </div>
         `).join('') + `</div>`;
     } else if (section === 'leadership') {
-        const list = window.appData?.mensagemLider || MOCK_DATA.mensagemLider;
         content.innerHTML = `
             <div class="section-container" style="padding-top:20px; text-align:center">
+                ${backBtn}
                 ${isMural ? '<h2 style="color:var(--gold); margin-bottom:20px">Mural da Liderança</h2>' : '<i class="fas fa-user-tie" style="font-size:50px; color:var(--gold); margin-bottom:20px"></i>'}
-                ${isMural ? '' : '<h4 style="color:var(--gold)">Mensagens da Liderança</h4>'}
-                ${isMural ? '' : '<p style="margin-top:10px; opacity:0.8; margin-bottom:30px">Assista às palavras de fé dos nossos pastores.</p>'}
-
                 <div style="text-align:left">
-                    ${list.map(msg => {
+                    ${(window.appData?.mensagemLider || MOCK_DATA.mensagemLider).map(msg => {
                         const embedUrl = getEmbedUrl(msg.VideoUrl);
-                        console.log("Carregando vídeo:", msg.VideoUrl, " -> Embed:", embedUrl);
                         return `
                             <div class="devotional-card" style="margin-bottom:24px; display:block; padding:0; overflow:hidden">
                                 ${embedUrl ? `
                                     <iframe width="100%" style="aspect-ratio: 16/9; border:none"
                                         src="${embedUrl}"
-                                        title="Video player"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        referrerpolicy="strict-origin-when-cross-origin"
                                         allowfullscreen>
                                     </iframe>
                                 ` : ''}
@@ -420,14 +555,13 @@ function showCommunitySection(section, btn, isMural = false) {
 
         content.innerHTML = `
             <div class="section-container" style="padding-top:20px">
+                ${backBtn}
                 <h4 style="color:var(--gold); margin-bottom:20px; text-align:center">Agenda Semanal</h4>
                 ${list.map(ev => {
                     const diaRaw = ev.Data || ev.Dia || "";
                     const titulo = ev.Titulo || ev.Evento || "";
                     const horaRaw = ev.Horario || ev.Hora || "";
                     const local = ev.Local || "";
-
-                    // Formatação de Data e Hora no padrão Brasil
                     const dia = formatDateBR(diaRaw, true) || diaRaw;
                     const hora = (horaRaw && horaRaw.includes(':')) ? horaRaw : (formatDateBR(horaRaw) ? formatDateBR(horaRaw).split(' às ')[1] : horaRaw);
 
@@ -451,12 +585,6 @@ function showCommunitySection(section, btn, isMural = false) {
                 }).join('')}
             </div>
         `;
-
-        if (!btn) {
-            const tabs = document.querySelectorAll('#community .tab-btn');
-            tabs.forEach(t => t.classList.remove('active'));
-            if (tabs[2]) tabs[2].classList.add('active');
-        }
     }
 }
 
@@ -651,24 +779,113 @@ const DEVOTIONAL_VERSES = {
     ]
 };
 
-function loadDevotional(mood = null) {
-    const detail = document.getElementById('devotional-detail');
+function loadIndependentDevotional(mood = null) {
+    loadDevotional(mood);
+}
+
+function loadIndependentMinistries() {
+    const content = document.getElementById('ministries-content');
+    if (!content) return;
+    const list = window.appData?.ministerios || MOCK_DATA.ministerios;
+    content.innerHTML = list.map(m => `
+        <div class="devotional-card" style="margin-bottom:16px; display:block; padding:0; overflow:hidden">
+            <img src="${m.ImagemUrl || 'https://via.placeholder.com/400x120/1A1A1A/FFD700?text=Ministerio'}"
+                 style="width: 100%; height: 120px; object-fit: cover; border-bottom: 1px solid rgba(255, 215, 0, 0.2);">
+            <div style="padding:16px">
+                <h4 style="color:var(--gold); margin-bottom:8px">${m.Nome}</h4>
+                <p style="color:#eee; font-size:14px; margin-bottom:10px">${m.Descricao}</p>
+                <small style="opacity:0.8">Líder: ${m.Lider}</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadIndependentAgenda() {
+    const content = document.getElementById('agenda-content');
+    if (!content) return;
+    const list = (window.appData?.eventos && window.appData.eventos.length > 0)
+                ? window.appData.eventos
+                : (window.appData?.agenda || MOCK_DATA.eventos);
+
+    content.innerHTML = list.map(ev => {
+        const diaRaw = ev.Data || ev.Dia || "";
+        const titulo = ev.Titulo || ev.Evento || "";
+        const horaRaw = ev.Horario || ev.Hora || "";
+        const local = ev.Local || "";
+        const dia = formatDateBR(diaRaw, true) || diaRaw;
+        const hora = (horaRaw && horaRaw.includes(':')) ? horaRaw : (formatDateBR(horaRaw) ? formatDateBR(horaRaw).split(' às ')[1] : horaRaw);
+
+        return `
+            <div class="devotional-card" style="margin-bottom:16px; border-left: 4px solid var(--gold); padding: 16px; display: flex; align-items: center; gap: 15px">
+                <div style="background: rgba(255, 215, 0, 0.1); width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center">
+                    <i class="fas fa-calendar-day" style="color:var(--gold); font-size: 20px"></i>
+                </div>
+                <div style="flex: 1">
+                    <h4 style="margin: 0; color: var(--gold); font-size: 16px; font-weight: 700">${titulo}</h4>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap">
+                        <span style="color: #fff; font-size: 13px; font-weight: 500">${dia}</span>
+                        ${dia && (hora || local) ? `<span style="color: var(--gold); opacity: 0.5">•</span>` : ''}
+                        <span style="color: #fff; font-size: 13px">${hora}</span>
+                        ${hora && local ? `<span style="color: var(--gold); opacity: 0.5">•</span>` : ''}
+                        <span style="color: #ccc; font-size: 13px">${local}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadDevotional(mood = null) {
+    const detail = document.getElementById('devotional-detail') || document.getElementById('devotional-content');
     if (!detail) return;
 
-    const verses = DEVOTIONAL_VERSES[mood] || DEVOTIONAL_VERSES['default'];
-    const randomVerse = verses[Math.floor(Math.random() * verses.length)];
+    detail.innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px; color:var(--gold)"></i><p style="margin-top:15px">Buscando Palavra de Deus...</p></div>`;
 
-    detail.innerHTML = `
-        <div class="section-container" style="padding-top:20px">
-            ${mood ? `<small class="gold-text">Sinto-me ${mood}</small>` : ''}
-            <h2 style="color:var(--gold); margin-top:5px">${randomVerse.title}</h2>
-            <p style="color:var(--light-grey); margin-bottom:20px">${randomVerse.ref}</p>
-            <p style="line-height:1.6; font-size:1.1em; font-style:italic">"${randomVerse.text}"</p>
-            <button class="btn-outline" style="margin-top:30px" onclick="shareDevotional('${randomVerse.title.replace(/'/g, "\\'")}', '${randomVerse.ref}', '${randomVerse.text.replace(/'/g, "\\'")}')">
-                Compartilhar
-            </button>
-        </div>
-    `;
+    // Referências curadas para o Devocional
+    const references = [
+        "john+3:16", "psalms+23:1", "1+corinthians+13:4", "philippians+4:13", "matthew+11:28",
+        "isaiah+41:10", "jeremiah+29:11", "romans+8:28", "proverbs+3:5", "joshua+1:9",
+        "psalms+46:1", "matthew+6:33", "galatians+5:22", "ephesians+2:8", "lamentations+3:22"
+    ];
+    const randomRef = references[Math.floor(Math.random() * references.length)];
+
+    try {
+        // Tenta buscar da API
+        const response = await fetch(`https://bible-api.com/${randomRef}?translation=almeida`);
+        if (!response.ok) throw new Error("Erro na API");
+        const data = await response.json();
+
+        detail.innerHTML = `
+            <div class="section-container" style="padding-top:20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; text-align: center;">
+                <div class="devotional-card" style="display:block; text-align:center; margin-bottom: 30px; border-color: rgba(255,215,0,0.4); max-width: 500px; width: 100%; padding: 40px; background: #1A1A1A;">
+                    <small class="gold-text" style="font-weight:bold; letter-spacing:2px; font-size: 1.1em; display: block; margin-bottom: 20px;">DEVOCIONAL</small>
+                    <p style="font-style:italic; margin:25px 0; font-size:1.5em; line-height: 1.6; color: white;">"${data.text.trim()}"</p>
+                    <strong class="gold-text" style="font-size: 1.2em; display: block; margin-top: 15px;">${data.reference}</strong>
+
+                    <button class="btn-outline" style="margin-top:30px" onclick="shareDevotional('Palavra de Deus', '${data.reference}', '${data.text.trim().replace(/'/g, "\\'")}')">
+                        <i class="fas fa-share-alt"></i> Compartilhar
+                    </button>
+                </div>
+                <button class="btn-outline" style="width:auto; padding:10px 20px" onclick="loadDevotional()">
+                    <i class="fas fa-redo"></i> Ver outro versículo
+                </button>
+            </div>
+        `;
+    } catch (error) {
+        console.error("Erro ao carregar devocional:", error);
+        // Fallback local se a API falhar
+        const fallback = DEVOTIONAL_VERSES['default'][0];
+        detail.innerHTML = `
+            <div class="section-container" style="padding-top:20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; text-align: center;">
+                <div class="devotional-card" style="display:block; text-align:center; margin-bottom: 30px; border-color: rgba(255,215,0,0.4); max-width: 500px; width: 100%; padding: 40px; background: #1A1A1A;">
+                    <small class="gold-text" style="font-weight:bold; letter-spacing:2px; font-size: 1.1em; display: block; margin-bottom: 20px;">DEVOCIONAL</small>
+                    <p style="font-style:italic; margin:25px 0; font-size:1.5em; line-height: 1.6; color: white;">"${fallback.text}"</p>
+                    <strong class="gold-text" style="font-size: 1.2em; display: block; margin-top: 15px;">${fallback.ref}</strong>
+                </div>
+                <p style="color:var(--light-grey); font-size:12px">Exibindo conteúdo offline. Verifique sua conexão para novos versículos.</p>
+            </div>
+        `;
+    }
 }
 
 function shareDevotional(title, reference, text) {
@@ -817,6 +1034,60 @@ async function submitPrayer() {
         console.error(e);
         alert("Erro ao enviar pedido de oração.");
     }
+}
+
+function checkNewMuralContent(data) {
+    const list = data.mensagemLider || [];
+    if (list.length === 0) return;
+
+    const latest = list[0];
+    const latestId = latest.Nome + latest.Mensagem;
+    const lastSeenId = localStorage.getItem('last_mural_id');
+
+    if (latestId !== lastSeenId) {
+        // Alerta visual no botão Mural
+        const muralBtn = document.querySelector('.action-btn[onclick*="leadership"]');
+        if (muralBtn) {
+            const badge = document.createElement('div');
+            badge.style.cssText = "position:absolute; top:-5px; right:15px; background:red; color:white; border-radius:50%; width:18px; height:18px; font-size:12px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid black";
+            badge.innerText = "!";
+            badge.id = "mural-badge";
+            muralBtn.style.position = "relative";
+            muralBtn.appendChild(badge);
+        }
+
+        // Alerta sonoro ou notificação visual ativa (Toast personalizado)
+        showNotification("Nova mensagem da Liderança no Mural!");
+    }
+}
+
+function showNotification(msg) {
+    const toast = document.createElement('div');
+    toast.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--gold); color:black; padding:12px 24px; border-radius:30px; font-weight:bold; z-index:2000; box-shadow:0 4px 15px rgba(0,0,0,0.5); animation: slideDown 0.5s ease";
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = "fadeOut 0.5s ease";
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
+
+function openZoomImage(url) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; display:flex; align-items:center; justify-content:center; cursor:pointer";
+    overlay.onclick = () => overlay.remove();
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = "max-width:95%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5)";
+
+    const closeBtn = document.createElement('div');
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.style.cssText = "position:absolute; top:20px; right:20px; color:white; font-size:24px";
+
+    overlay.appendChild(img);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
 }
 
 function applyZoomEffect(img) {
