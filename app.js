@@ -465,9 +465,19 @@ function showCommunitySection(section, btn, isMural = false) {
     }
 
     if (section === 'devotional') {
-        content.innerHTML = `<div class="section-container" style="padding-top:20px">${backBtn}<div id="bible-devotional" class="sub-view active"><div class="full-devotional" id="devotional-detail"></div></div></div>`;
+        content.innerHTML = `
+            <div class="section-container" style="padding-top:20px">
+                ${backBtn}
+                <div id="devotional-content" class="active">
+                    <div style="text-align:center; padding:40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:30px; color:var(--gold)"></i>
+                        <p style="margin-top:15px">Buscando Palavra de Deus...</p>
+                    </div>
+                </div>
+            </div>`;
         loadDevotional();
-    } else if (section === 'gallery') {
+    }
+ else if (section === 'gallery') {
         const galeria = window.appData?.galeria || MOCK_DATA.galeria;
 
         if (galeria && galeria.length > 0) {
